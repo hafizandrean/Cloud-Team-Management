@@ -1,13 +1,14 @@
 <?php
+/**
+ * Cloud Team Management - Root Entry Point
+ * Automatically redirects users based on their authentication status.
+ */
 
-require_once 'config/database.php';
+require_once __DIR__ . '/config/auth.php';
 
-$db = Database::getConnection();
-
-$stmt = $db->query("SELECT * FROM anggota");
-
-echo "<h1>Daftar Anggota</h1>";
-
-while ($row = $stmt->fetch()) {
-    echo $row['nama'] . "<br>";
+if (isLoggedIn()) {
+    header("Location: dashboard.php");
+} else {
+    header("Location: login.php");
 }
+exit;
