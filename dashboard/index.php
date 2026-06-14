@@ -118,25 +118,22 @@ $percentages = [
                             <span>Anggota</span>
                         </a>
                     </li>
-                    <li class="sidebar-item disabled">
-                        <a href="#" id="nav-proyek">
+                    <li class="sidebar-item">
+                        <a href="../proyek/index.php" id="nav-proyek">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
                             <span>Proyek</span>
-                            <span class="coming-soon">Soon</span>
                         </a>
                     </li>
-                    <li class="sidebar-item disabled">
-                        <a href="#" id="nav-assignment">
+                    <li class="sidebar-item">
+                        <a href="../assignment/index.php" id="nav-assignment">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><polyline points="16 11 18 13 22 9"></polyline></svg>
                             <span>Assignment</span>
-                            <span class="coming-soon">Soon</span>
                         </a>
                     </li>
-                    <li class="sidebar-item disabled">
-                        <a href="#" id="nav-activity">
+                    <li class="sidebar-item">
+                        <a href="../activity-log/index.php" id="nav-activity">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                             <span>Activity Log</span>
-                            <span class="coming-soon">Soon</span>
                         </a>
                     </li>
                 </ul>
@@ -305,10 +302,10 @@ $percentages = [
                                     <span class="fw-medium small">Kelola Anggota</span>
                                 </div>
                             </a>
-                            <a href="#" class="btn btn-light border text-start py-3 px-3 disabled" style="opacity: 0.65;">
+                            <a href="../proyek/index.php" class="btn btn-light border text-start py-3 px-3">
                                 <div class="d-flex align-items-center gap-2">
                                     <span>📂</span>
-                                    <span class="fw-medium small">Kelola Proyek (Belum Tersedia)</span>
+                                    <span class="fw-medium small">Kelola Proyek</span>
                                 </div>
                             </a>
                         </div>
@@ -320,7 +317,7 @@ $percentages = [
             <div class="row g-4">
                 <!-- Recent Projects Table -->
                 <div class="col-12 col-xl-6">
-                    <div class="card border-0 shadow-sm p-4">
+                    <div class="card border-0 shadow-sm p-4 h-100">
                         <h5 class="card-title fw-bold mb-3">5 Proyek Terbaru</h5>
                         <div class="table-responsive">
                             <table class="table table-hover table-custom mb-0">
@@ -362,7 +359,7 @@ $percentages = [
 
                 <!-- Recent Members Table -->
                 <div class="col-12 col-xl-6">
-                    <div class="card border-0 shadow-sm p-4">
+                    <div class="card border-0 shadow-sm p-4 h-100">
                         <h5 class="card-title fw-bold mb-3">5 Anggota Terbaru</h5>
                         <div class="table-responsive">
                             <table class="table table-hover table-custom mb-0">
@@ -405,9 +402,8 @@ $percentages = [
                     </div>
                 </div>
             </div>
-            <!-- Footer -->
             <footer class="text-center text-muted small mt-5 pt-3 border-top">
-                Cloud Team Management v1.0 &copy; 2026 Kelompok X
+                Cloud Team Management v1.3 &copy; 2026 Kelompok 2
             </footer>
         </main>
     </div>

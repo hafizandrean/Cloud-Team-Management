@@ -4,6 +4,7 @@
  */
 
 require_once __DIR__ . '/../config/layout.php';
+require_once __DIR__ . '/../config/activity_helper.php';
 
 $db = Database::getConnection();
 
@@ -99,6 +100,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':foto' => $fotoFilename
             ]);
 
+            // Write activity log
+            writeLog($db, $_SESSION['user_id'], 'CREATE_MEMBER', 'Menambahkan anggota baru: ' . $nama);
+
             $_SESSION['flash_success'] = 'Anggota berhasil ditambahkan.';
             header('Location: index.php');
             exit;
@@ -138,9 +142,9 @@ renderHeader('Tambah Anggota Baru', 'anggota', '../');
     </div>
 <?php endif; ?>
 
-<div class="row">
+<div class="row g-4">
     <div class="col-12 col-lg-8">
-        <div class="card border-0 shadow-sm p-4 mb-4">
+        <div class="card border-0 shadow-sm p-4 h-100">
             <form method="POST" action="create.php" enctype="multipart/form-data" class="needs-validation">
                 
                 <!-- Nama -->
@@ -198,13 +202,25 @@ renderHeader('Tambah Anggota Baru', 'anggota', '../');
 
     <!-- Preview/Informasi Sidebar Card -->
     <div class="col-12 col-lg-4">
-        <div class="card border-0 shadow-sm p-4 mb-4">
+        <div class="card border-0 shadow-sm p-4 h-100">
             <h5 class="fw-bold text-dark mb-3">Panduan Pengisian</h5>
-            <ul class="text-muted small ps-3">
-                <li class="mb-2">Kolom dengan tanda bintang (<span class="text-danger">*</span>) wajib diisi.</li>
-                <li class="mb-2">Pastikan NIM yang diinput adalah unik dan tidak terduplikasi dalam sistem.</li>
-                <li class="mb-2">Gunakan format penulisan email yang benar seperti <code>nama@domain.com</code>.</li>
-                <li class="mb-2">Jika Anda tidak mengunggah foto profil, sistem akan otomatis menghasilkan inisial huruf dari nama anggota sebagai avatar default.</li>
+            <ul class="text-muted small ps-0" style="list-style-type: none;">
+                <li class="mb-3 d-flex gap-2">
+                    <span>📌</span>
+                    <span>Kolom dengan tanda bintang (<span class="text-danger">*</span>) wajib diisi dengan benar.</span>
+                </li>
+                <li class="mb-3 d-flex gap-2">
+                    <span>🔒</span>
+                    <span>Pastikan NIM yang diinput adalah unik dan tidak terduplikasi dalam sistem.</span>
+                </li>
+                <li class="mb-3 d-flex gap-2">
+                    <span>✉</span>
+                    <span>Gunakan format penulisan email yang benar seperti <code>nama@domain.com</code>.</span>
+                </li>
+                <li class="mb-3 d-flex gap-2">
+                    <span>👤</span>
+                    <span>Jika Anda tidak mengunggah foto profil, sistem akan otomatis menghasilkan inisial huruf dari nama anggota sebagai avatar default.</span>
+                </li>
             </ul>
         </div>
     </div>

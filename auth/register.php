@@ -105,7 +105,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background-color: var(--bg-color);
+            background: radial-gradient(circle at 0% 0%, rgba(99, 102, 241, 0.05) 0%, transparent 40%),
+                        radial-gradient(circle at 100% 100%, rgba(14, 165, 233, 0.05) 0%, transparent 40%),
+                        #f8fafc;
             color: var(--text-body);
             min-height: 100vh;
             display: flex;
@@ -121,12 +123,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         .register-card {
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
             border-radius: 16px;
             padding: 36px 32px;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 
-                        0 8px 10px -6px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 8px 32px 0 rgba(99, 102, 241, 0.04);
+            transition: all 0.3s ease;
+        }
+
+        .register-card:hover {
+            box-shadow: 0 12px 40px 0 rgba(99, 102, 241, 0.08);
+            border-color: rgba(99, 102, 241, 0.2);
         }
 
         .logo-section {
@@ -146,6 +155,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             font-weight: 700;
             font-size: 24px;
             margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1);
         }
 
         .logo-title {
@@ -203,12 +213,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             border: 1px solid var(--border-color);
             border-radius: 8px;
             color: var(--text-main);
-            background-color: #ffffff;
+            background-color: rgba(255, 255, 255, 0.5);
             transition: all 0.2s ease;
         }
 
         .form-input:focus, .form-select:focus {
             outline: none;
+            background-color: rgba(255, 255, 255, 0.9);
             border-color: var(--primary-color);
             box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
         }
@@ -226,11 +237,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             cursor: pointer;
             transition: all 0.2s ease;
             margin-top: 10px;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
         }
 
         .btn-submit:hover {
             background-color: var(--primary-hover);
             transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(99, 102, 241, 0.25);
         }
 
         .footer-text {

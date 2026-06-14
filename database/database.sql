@@ -6,6 +6,7 @@ CREATE DATABASE IF NOT EXISTS `cloud_team_management_db`;
 USE `cloud_team_management_db`;
 
 -- Drop tables if they exist (dependencies first)
+DROP TABLE IF EXISTS `activity_logs`;
 DROP TABLE IF EXISTS `anggota_proyek`;
 DROP TABLE IF EXISTS `anggota`;
 DROP TABLE IF EXISTS `proyek`;
@@ -51,9 +52,21 @@ CREATE TABLE `anggota_proyek` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `anggota_id` INT NOT NULL,
   `proyek_id` INT NOT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT `fk_ap_anggota` FOREIGN KEY (`anggota_id`) REFERENCES `anggota` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `fk_ap_proyek` FOREIGN KEY (`proyek_id`) REFERENCES `proyek` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   UNIQUE KEY `uk_anggota_proyek` (`anggota_id`, `proyek_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- 5. Create activity_logs table
+CREATE TABLE `activity_logs` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `user_id` INT NOT NULL,
+  `activity_type` VARCHAR(50) NOT NULL,
+  `description` TEXT NOT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT `fk_al_users` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 

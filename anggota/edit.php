@@ -4,6 +4,7 @@
  */
 
 require_once __DIR__ . '/../config/layout.php';
+require_once __DIR__ . '/../config/activity_helper.php';
 
 $db = Database::getConnection();
 
@@ -148,6 +149,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ]);
             }
 
+            // Sync session variables if editing own profile
+            if (isset($_SESSION['user_id']) && !empty($member['id_user']) && (int)$member['id_user'] === (int)$_SESSION['user_id']) {
+                $_SESSION['nama'] = $nama;
+                $_SESSION['email'] = $email;
+                if ($hasNewFoto) {
+                    $_SESSION['foto'] = $newFotoFilename;
+                }
+            }
+
+            // Write activity log
+            writeLog($db, $_SESSION['user_id'], 'UPDATE_MEMBER', 'Mengubah anggota: ' . $nama);
+
             $_SESSION['flash_success'] = 'Anggota berhasil diperbarui.';
             header('Location: index.php');
             exit;
@@ -187,9 +200,9 @@ renderHeader('Edit Anggota', 'anggota', '../');
     </div>
 <?php endif; ?>
 
-<div class="row">
+<div class="row g-4">
     <div class="col-12 col-lg-8">
-        <div class="card border-0 shadow-sm p-4 mb-4">
+        <div class="card border-0 shadow-sm p-4 h-100">
             <form method="POST" action="edit.php?id=<?php echo $id; ?>" enctype="multipart/form-data" class="needs-validation">
                 
                 <!-- Nama -->
@@ -256,12 +269,21 @@ renderHeader('Edit Anggota', 'anggota', '../');
 
     <!-- Informasi Sidebar Card -->
     <div class="col-12 col-lg-4">
-        <div class="card border-0 shadow-sm p-4 mb-4">
+        <div class="card border-0 shadow-sm p-4 h-100">
             <h5 class="fw-bold text-dark mb-3">Panduan Pengeditan</h5>
-            <ul class="text-muted small ps-3">
-                <li class="mb-2">Jika Anda mengganti foto profil dengan yang baru, foto profil lama otomatis dihapus dari sistem penyimpanan server.</li>
-                <li class="mb-2">NIM dan alamat email harus tetap unik di dalam sistem (tidak boleh bentrok dengan milik anggota lain).</li>
-                <li class="mb-2">Kolom dengan tanda bintang (<span class="text-danger">*</span>) harus diisi.</li>
+            <ul class="text-muted small ps-0" style="list-style-type: none;">
+                <li class="mb-3 d-flex gap-2">
+                    <span>💡</span>
+                    <span>Jika Anda mengganti foto profil dengan yang baru, foto profil lama otomatis dihapus dari sistem penyimpanan server.</span>
+                </li>
+                <li class="mb-3 d-flex gap-2">
+                    <span>🔒</span>
+                    <span>NIM dan alamat email harus tetap unik di dalam sistem (tidak boleh bentrok dengan milik anggota lain).</span>
+                </li>
+                <li class="mb-3 d-flex gap-2">
+                    <span>📌</span>
+                    <span>Kolom dengan tanda bintang (<span class="text-danger">*</span>) harus diisi dengan benar.</span>
+                </li>
             </ul>
         </div>
     </div>
