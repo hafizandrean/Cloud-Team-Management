@@ -240,7 +240,7 @@ renderHeader('Kelola Assignment', 'assignment', '../');
                                         <td>
                                             <?php 
                                             $avatarPath = '../uploads/' . $a['foto'];
-                                            if (!empty($a['foto']) && file_exists(__DIR__ . '/../' . $avatarPath)): 
+                                            if (!empty($a['foto']) && file_exists(dirname(__DIR__) . '/uploads/' . $a['foto'])): 
                                             ?>
                                                 <img src="<?php echo htmlspecialchars($avatarPath); ?>" alt="Avatar" class="avatar-mini" style="width: 36px; height: 36px;">
                                             <?php else: ?>

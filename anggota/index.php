@@ -133,7 +133,7 @@ renderHeader('Kelola Anggota', 'anggota', '../');
                             <td>
                                 <?php 
                                 $avatarPath = '../uploads/' . $m['foto'];
-                                if (!empty($m['foto']) && file_exists(__DIR__ . '/../' . $avatarPath)): 
+                                if (!empty($m['foto']) && file_exists(dirname(__DIR__) . '/uploads/' . $m['foto'])): 
                                 ?>
                                     <img src="<?php echo htmlspecialchars($avatarPath); ?>" alt="Avatar" class="avatar-mini" style="width: 40px; height: 40px;">
                                 <?php else: ?>

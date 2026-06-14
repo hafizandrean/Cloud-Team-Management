@@ -105,6 +105,13 @@ function renderHeader($title, $activeMenu = 'dashboard', $basePath = '../') {
                             <span>Activity Log</span>
                         </a>
                     </li>
+                    <!-- Reports -->
+                    <li class="sidebar-item <?php echo $activeMenu === 'reports' ? 'active' : ''; ?>">
+                        <a href="<?php echo $basePath; ?>reports/index.php" id="nav-reports">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                            <span>Reports</span>
+                        </a>
+                    </li>
                 </ul>
                 <div class="sidebar-item border-top pt-3 mb-2">
                     <form action="<?php echo $basePath; ?>auth/logout.php" method="POST" class="w-100">

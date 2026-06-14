@@ -238,7 +238,7 @@ renderHeader('Edit Anggota', 'anggota', '../');
                     <div class="d-flex align-items-center gap-3 mb-3">
                         <?php 
                         $avatarPath = '../uploads/' . $member['foto'];
-                        if (!empty($member['foto']) && file_exists(__DIR__ . '/../' . $avatarPath)): 
+                        if (!empty($member['foto']) && file_exists(dirname(__DIR__) . '/uploads/' . $member['foto'])): 
                         ?>
                             <img src="<?php echo htmlspecialchars($avatarPath); ?>" alt="Avatar" class="avatar-mini rounded" style="width: 60px; height: 60px;">
                         <?php else: ?>

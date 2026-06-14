@@ -5,6 +5,7 @@
 
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/auth.php';
+require_once __DIR__ . '/../config/activity_helper.php';
 
 // Enforce authentication
 requireLogin();
@@ -25,6 +26,89 @@ $statusCounts = [
     'tertunda' => 0
 ];
 $errorMsg = '';
+
+// Handle profile photo upload
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['profile_photo'])) {
+    $file = $_FILES['profile_photo'];
+    
+    if ($file['error'] === UPLOAD_ERR_OK) {
+        $fileName = $file['name'];
+        $fileTmpName = $file['tmp_name'];
+        $fileSize = $file['size'];
+        
+        $fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+        $allowedExtensions = ['jpg', 'jpeg', 'png'];
+        
+        if (in_array($fileExt, $allowedExtensions) && $fileSize <= 2 * 1024 * 1024) {
+            $newFotoFilename = 'anggota/' . uniqid() . '.' . $fileExt;
+            $uploadTarget = __DIR__ . '/../uploads/' . $newFotoFilename;
+            
+            // Ensure uploads/anggota directory exists
+            if (!is_dir(__DIR__ . '/../uploads/anggota')) {
+                mkdir(__DIR__ . '/../uploads/anggota', 0777, true);
+            }
+            
+            if (move_uploaded_file($fileTmpName, $uploadTarget)) {
+                try {
+                    $db = Database::getConnection();
+                    
+                    // Check if user has an anggota record
+                    $stmt = $db->prepare("SELECT id, foto FROM anggota WHERE id_user = ?");
+                    $stmt->execute([$currentUser['id']]);
+                    $member = $stmt->fetch();
+                    
+                    if ($member) {
+                        // Delete old photo if exists
+                        if (!empty($member['foto'])) {
+                            $oldFile = __DIR__ . '/../uploads/' . $member['foto'];
+                            if (file_exists($oldFile) && is_file($oldFile)) {
+                                unlink($oldFile);
+                            }
+                        }
+                        
+                        // Update existing anggota record
+                        $updateStmt = $db->prepare("UPDATE anggota SET foto = ?, updated_at = NOW() WHERE id = ?");
+                        $updateStmt->execute([$newFotoFilename, $member['id']]);
+                    } else {
+                        // Create a new anggota record for the user
+                        $uStmt = $db->prepare("SELECT email, username FROM users WHERE id = ?");
+                        $uStmt->execute([$currentUser['id']]);
+                        $userObj = $uStmt->fetch();
+                        
+                        $userEmail = $userObj['email'] ?? ($currentUser['username'] . '@cloudteam.com');
+                        $userNama = $currentUser['nama'] ?: $currentUser['username'];
+                        $dummyNim = '22' . str_pad($currentUser['id'], 8, '0', STR_PAD_LEFT);
+                        
+                        $insertStmt = $db->prepare("
+                            INSERT INTO anggota (nama, nim, email, foto, id_user, created_at, updated_at)
+                            VALUES (?, ?, ?, ?, ?, NOW(), NOW())
+                        ");
+                        $insertStmt->execute([$userNama, $dummyNim, $userEmail, $newFotoFilename, $currentUser['id']]);
+                    }
+                    
+                    // Update session variable
+                    startSession();
+                    $_SESSION['foto'] = $newFotoFilename;
+                    
+                    // Log activity
+                    writeLog($db, $currentUser['id'], 'UPDATE_MEMBER', 'Mengubah foto profil');
+                    
+                    $_SESSION['flash_success'] = 'Foto profil berhasil diperbarui.';
+                    header("Location: index.php");
+                    exit;
+                } catch (Exception $e) {
+                    $errorMsg = 'Gagal menyimpan foto profil ke database: ' . $e->getMessage();
+                }
+            } else {
+                $errorMsg = 'Gagal memindahkan berkas foto.';
+            }
+        } else {
+            $errorMsg = 'Berkas harus berupa JPG, JPEG, atau PNG dengan ukuran maksimal 2MB.';
+        }
+    } else {
+        $errorMsg = 'Terjadi kesalahan saat mengunggah berkas.';
+    }
+}
 
 try {
     $db = Database::getConnection();
@@ -136,6 +220,12 @@ $percentages = [
                             <span>Activity Log</span>
                         </a>
                     </li>
+                    <li class="sidebar-item">
+                        <a href="../reports/index.php" id="nav-reports">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                            <span>Reports</span>
+                        </a>
+                    </li>
                 </ul>
                 <div class="sidebar-item border-top pt-3 mb-2">
                     <form action="../auth/logout.php" method="POST" class="w-100">
@@ -165,43 +255,43 @@ $percentages = [
             <!-- Summary Cards Grid -->
             <div class="row g-4 mb-4">
                 <div class="col-12 col-sm-6 col-lg-3">
-                    <div class="card-summary d-flex align-items-center justify-content-between">
+                    <a href="../activity-log/index.php" class="card-summary d-flex align-items-center justify-content-between text-decoration-none" title="Lihat Log Aktivitas User">
                         <div class="metric-info">
-                            <div class="card-summary-title">Total User</div>
-                            <div class="card-summary-value" id="val-users"><?php echo $totalUsers; ?></div>
+                            <div class="card-summary-title text-muted">Total User</div>
+                            <div class="card-summary-value text-dark" id="val-users">0</div>
                         </div>
                         <div class="card-summary-icon users">👤</div>
-                    </div>
+                    </a>
                 </div>
                 
                 <div class="col-12 col-sm-6 col-lg-3">
-                    <div class="card-summary d-flex align-items-center justify-content-between">
+                    <a href="../anggota/index.php" class="card-summary d-flex align-items-center justify-content-between text-decoration-none" title="Kelola Anggota">
                         <div class="metric-info">
-                            <div class="card-summary-title">Total Anggota</div>
-                            <div class="card-summary-value" id="val-anggota"><?php echo $totalAnggota; ?></div>
+                            <div class="card-summary-title text-muted">Total Anggota</div>
+                            <div class="card-summary-value text-dark" id="val-anggota">0</div>
                         </div>
                         <div class="card-summary-icon anggota">👥</div>
-                    </div>
+                    </a>
                 </div>
 
                 <div class="col-12 col-sm-6 col-lg-3">
-                    <div class="card-summary d-flex align-items-center justify-content-between">
+                    <a href="../proyek/index.php" class="card-summary d-flex align-items-center justify-content-between text-decoration-none" title="Kelola Proyek">
                         <div class="metric-info">
-                            <div class="card-summary-title">Total Proyek</div>
-                            <div class="card-summary-value" id="val-proyek"><?php echo $totalProyek; ?></div>
+                            <div class="card-summary-title text-muted">Total Proyek</div>
+                            <div class="card-summary-value text-dark" id="val-proyek">0</div>
                         </div>
                         <div class="card-summary-icon proyek">📂</div>
-                    </div>
+                    </a>
                 </div>
 
                 <div class="col-12 col-sm-6 col-lg-3">
-                    <div class="card-summary d-flex align-items-center justify-content-between">
+                    <a href="../assignment/index.php" class="card-summary d-flex align-items-center justify-content-between text-decoration-none" title="Kelola Assignment">
                         <div class="metric-info">
-                            <div class="card-summary-title">Assignment</div>
-                            <div class="card-summary-value" id="val-assignments"><?php echo $totalAssignments; ?></div>
+                            <div class="card-summary-title text-muted">Assignment</div>
+                            <div class="card-summary-value text-dark" id="val-assignments">0</div>
                         </div>
                         <div class="card-summary-icon assignment">🔗</div>
-                    </div>
+                    </a>
                 </div>
             </div>
 
@@ -209,83 +299,102 @@ $percentages = [
             <div class="row g-4 mb-4">
                 <!-- Project Status Summary -->
                 <div class="col-12 col-md-4">
-                    <div class="card h-100 shadow-sm border-0 p-4">
+                    <div class="card h-100 p-4">
                         <h5 class="card-title fw-bold mb-3">Ringkasan Status Proyek</h5>
                         
                         <div class="mb-3">
-                            <div class="d-flex justify-content-between small mb-1">
-                                <span>Planning</span>
-                                <span class="fw-bold"><?php echo $statusCounts['direncanakan']; ?></span>
-                            </div>
-                            <div class="progress" style="height: 8px;">
-                                <div class="progress-bar bg-secondary" role="progressbar" style="width: <?php echo $percentages['direncanakan']; ?>%" aria-valuenow="<?php echo $percentages['direncanakan']; ?>" aria-valuemin="0" aria-valuemax="100"></div>
-                            </div>
+                            <a href="../proyek/index.php?status=direncanakan" class="clickable-status-item" title="<?php echo $statusCounts['direncanakan']; ?> proyek dalam tahap perencanaan">
+                                <div class="d-flex justify-content-between small mb-1">
+                                    <span class="fw-medium">Planning</span>
+                                    <span class="fw-bold text-muted"><?php echo $statusCounts['direncanakan']; ?></span>
+                                </div>
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar bg-secondary" role="progressbar" style="width: <?php echo $percentages['direncanakan']; ?>%" aria-valuenow="<?php echo $percentages['direncanakan']; ?>" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                            </a>
                         </div>
 
                         <div class="mb-3">
-                            <div class="d-flex justify-content-between small mb-1">
-                                <span>On Progress</span>
-                                <span class="fw-bold"><?php echo $statusCounts['berjalan']; ?></span>
-                            </div>
-                            <div class="progress" style="height: 8px;">
-                                <div class="progress-bar bg-primary" role="progressbar" style="width: <?php echo $percentages['berjalan']; ?>%" aria-valuenow="<?php echo $percentages['berjalan']; ?>" aria-valuemin="0" aria-valuemax="100"></div>
-                            </div>
+                            <a href="../proyek/index.php?status=berjalan" class="clickable-status-item" title="<?php echo $statusCounts['berjalan']; ?> proyek sedang berjalan">
+                                <div class="d-flex justify-content-between small mb-1">
+                                    <span class="fw-medium">On Progress</span>
+                                    <span class="fw-bold text-primary"><?php echo $statusCounts['berjalan']; ?></span>
+                                </div>
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar bg-primary" role="progressbar" style="width: <?php echo $percentages['berjalan']; ?>%" aria-valuenow="<?php echo $percentages['berjalan']; ?>" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                            </a>
                         </div>
 
                         <div class="mb-3">
-                            <div class="d-flex justify-content-between small mb-1">
-                                <span>Completed</span>
-                                <span class="fw-bold"><?php echo $statusCounts['selesai']; ?></span>
-                            </div>
-                            <div class="progress" style="height: 8px;">
-                                <div class="progress-bar bg-success" role="progressbar" style="width: <?php echo $percentages['selesai']; ?>%" aria-valuenow="<?php echo $percentages['selesai']; ?>" aria-valuemin="0" aria-valuemax="100"></div>
-                            </div>
+                            <a href="../proyek/index.php?status=selesai" class="clickable-status-item" title="<?php echo $statusCounts['selesai']; ?> proyek telah selesai">
+                                <div class="d-flex justify-content-between small mb-1">
+                                    <span class="fw-medium">Completed</span>
+                                    <span class="fw-bold text-success"><?php echo $statusCounts['selesai']; ?></span>
+                                </div>
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar bg-success" role="progressbar" style="width: <?php echo $percentages['selesai']; ?>%" aria-valuenow="<?php echo $percentages['selesai']; ?>" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                            </a>
                         </div>
 
                         <div>
-                            <div class="d-flex justify-content-between small mb-1">
-                                <span>Suspended</span>
-                                <span class="fw-bold"><?php echo $statusCounts['tertunda']; ?></span>
-                            </div>
-                            <div class="progress" style="height: 8px;">
-                                <div class="progress-bar bg-danger" role="progressbar" style="width: <?php echo $percentages['tertunda']; ?>%" aria-valuenow="<?php echo $percentages['tertunda']; ?>" aria-valuemin="0" aria-valuemax="100"></div>
-                            </div>
+                            <a href="../proyek/index.php?status=tertunda" class="clickable-status-item" title="<?php echo $statusCounts['tertunda']; ?> proyek ditangguhkan">
+                                <div class="d-flex justify-content-between small mb-1">
+                                    <span class="fw-medium">Suspended</span>
+                                    <span class="fw-bold text-danger"><?php echo $statusCounts['tertunda']; ?></span>
+                                </div>
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar bg-danger" role="progressbar" style="width: <?php echo $percentages['tertunda']; ?>%" aria-valuenow="<?php echo $percentages['tertunda']; ?>" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                            </a>
                         </div>
                     </div>
                 </div>
 
                 <!-- Account Information Widget -->
                 <div class="col-12 col-md-4">
-                    <div class="card h-100 shadow-sm border-0 p-4">
-                        <h5 class="card-title fw-bold mb-3">Informasi Akun</h5>
-                        <div class="d-flex align-items-center gap-3 mb-4">
-                            <?php 
-                            $photoPath = '../uploads/' . $currentUser['foto'];
-                            if (!empty($currentUser['foto']) && file_exists(__DIR__ . '/../' . $photoPath)): 
-                            ?>
-                                <img src="<?php echo htmlspecialchars($photoPath); ?>" alt="Avatar" class="avatar-mini" style="width: 50px; height: 50px;">
-                            <?php else: ?>
-                                <div class="avatar-mini text-uppercase fw-bold" style="width: 50px; height: 50px; font-size: 18px;">
-                                    <?php echo htmlspecialchars(substr($currentUser['nama'], 0, 1)); ?>
+                    <div class="card h-100 p-4">
+                        <h5 class="card-title fw-bold mb-3 text-center">Informasi Akun</h5>
+                        
+                        <!-- Profile Form for Avatar Upload -->
+                        <form id="profile-photo-form" action="index.php" method="POST" enctype="multipart/form-data" class="d-flex flex-column align-items-center mb-4">
+                            <input type="file" name="profile_photo" id="profile-photo-input" accept="image/png, image/jpeg, image/jpg" style="display:none;" onchange="document.getElementById('profile-photo-form').submit();">
+                            
+                            <div class="profile-avatar-container cursor-pointer" onclick="document.getElementById('profile-photo-input').click();" title="Klik untuk mengubah foto profil">
+                                <?php 
+                                $photoPath = '../uploads/' . $currentUser['foto'];
+                                if (!empty($currentUser['foto']) && file_exists(dirname(__DIR__) . '/uploads/' . $currentUser['foto'])): 
+                                ?>
+                                    <img src="<?php echo htmlspecialchars($photoPath); ?>" alt="Avatar" class="profile-avatar-img">
+                                <?php else: ?>
+                                    <div class="profile-avatar-placeholder text-uppercase fw-bold">
+                                        <?php echo htmlspecialchars(substr($currentUser['nama'], 0, 1)); ?>
+                                    </div>
+                                <?php endif; ?>
+                                
+                                <div class="profile-avatar-overlay d-flex align-items-center justify-content-center">
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white mb-1"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                                    <span class="text-white fw-semibold" style="font-size: 10px; letter-spacing: 0.5px; text-transform: uppercase;">Ubah Foto</span>
                                 </div>
-                            <?php endif; ?>
-                            <div>
-                                <h6 class="fw-bold mb-0"><?php echo htmlspecialchars($currentUser['nama']); ?></h6>
-                                <span class="text-muted small text-capitalize"><?php echo htmlspecialchars($currentUser['role']); ?></span>
                             </div>
-                        </div>
+                            
+                            <h6 class="fw-bold mt-3 mb-1 text-dark" style="font-size: 15px;"><?php echo htmlspecialchars($currentUser['nama']); ?></h6>
+                            <span class="badge bg-primary px-3 py-1 text-white" style="font-size: 9px; font-weight: 600; border-radius: 4px;"><?php echo strtoupper(htmlspecialchars($currentUser['role'])); ?></span>
+                        </form>
+
                         <div class="small">
                             <div class="d-flex justify-content-between py-2 border-bottom">
                                 <span class="text-muted">Username:</span>
-                                <span class="fw-bold"><?php echo htmlspecialchars($currentUser['username']); ?></span>
+                                <span class="fw-bold text-dark"><?php echo htmlspecialchars($currentUser['username']); ?></span>
                             </div>
                             <div class="d-flex justify-content-between py-2 border-bottom">
                                 <span class="text-muted">Role Akses:</span>
-                                <span class="fw-bold text-uppercase"><?php echo htmlspecialchars($currentUser['role']); ?></span>
+                                <span class="fw-bold text-dark text-uppercase"><?php echo htmlspecialchars($currentUser['role']); ?></span>
                             </div>
                             <div class="d-flex justify-content-between py-2">
                                 <span class="text-muted">Terakhir Masuk:</span>
-                                <span class="fw-bold">Hari Ini</span>
+                                <span class="fw-bold text-dark">Hari Ini</span>
                             </div>
                         </div>
                     </div>
@@ -293,20 +402,22 @@ $percentages = [
 
                 <!-- Quick Access Shortcut Widget -->
                 <div class="col-12 col-md-4">
-                    <div class="card h-100 shadow-sm border-0 p-4">
+                    <div class="card h-100 p-4">
                         <h5 class="card-title fw-bold mb-3">Aksi Cepat</h5>
                         <div class="d-flex flex-column gap-3">
-                            <a href="../anggota/index.php" class="btn btn-light border text-start py-3 px-3">
+                            <a href="../anggota/index.php" class="btn btn-light border-0 w-100 text-start py-3 px-3 shadow-sm d-flex align-items-center justify-content-between" style="border-radius: 10px; background: rgba(255, 255, 255, 0.4); border: 1px solid rgba(255,255,255,0.3); transition: all 0.2s ease;" onmouseover="this.style.background='rgba(99, 102, 241, 0.08)';" onmouseout="this.style.background='rgba(255, 255, 255, 0.4)';">
                                 <div class="d-flex align-items-center gap-2">
-                                    <span>👥</span>
-                                    <span class="fw-medium small">Kelola Anggota</span>
+                                    <span style="font-size: 18px;">👥</span>
+                                    <span class="fw-semibold small text-dark">Kelola Anggota</span>
                                 </div>
+                                <span class="text-muted small">→</span>
                             </a>
-                            <a href="../proyek/index.php" class="btn btn-light border text-start py-3 px-3">
+                            <a href="../proyek/index.php" class="btn btn-light border-0 w-100 text-start py-3 px-3 shadow-sm d-flex align-items-center justify-content-between" style="border-radius: 10px; background: rgba(255, 255, 255, 0.4); border: 1px solid rgba(255,255,255,0.3); transition: all 0.2s ease;" onmouseover="this.style.background='rgba(99, 102, 241, 0.08)';" onmouseout="this.style.background='rgba(255, 255, 255, 0.4)';">
                                 <div class="d-flex align-items-center gap-2">
-                                    <span>📂</span>
-                                    <span class="fw-medium small">Kelola Proyek</span>
+                                    <span style="font-size: 18px;">📂</span>
+                                    <span class="fw-semibold small text-dark">Kelola Proyek</span>
                                 </div>
+                                <span class="text-muted small">→</span>
                             </a>
                         </div>
                     </div>
@@ -317,7 +428,7 @@ $percentages = [
             <div class="row g-4">
                 <!-- Recent Projects Table -->
                 <div class="col-12 col-xl-6">
-                    <div class="card border-0 shadow-sm p-4 h-100">
+                    <div class="card p-4 h-100">
                         <h5 class="card-title fw-bold mb-3">5 Proyek Terbaru</h5>
                         <div class="table-responsive">
                             <table class="table table-hover table-custom mb-0">
@@ -331,12 +442,18 @@ $percentages = [
                                 <tbody>
                                     <?php if (empty($recentProjects)): ?>
                                         <tr>
-                                            <td colspan="3" class="text-center text-muted py-3">Belum ada proyek terdaftar.</td>
+                                            <td colspan="3" class="text-center py-5">
+                                                <div class="empty-state-container">
+                                                    <span class="empty-state-icon">📋</span>
+                                                    <h6 class="fw-bold text-dark mb-1">Belum Ada Proyek</h6>
+                                                    <p class="empty-state-text small">Mulai dengan membuat proyek pertama Anda.</p>
+                                                </div>
+                                            </td>
                                         </tr>
                                     <?php else: ?>
                                         <?php foreach ($recentProjects as $p): ?>
-                                            <tr>
-                                                <td class="fw-medium"><?php echo htmlspecialchars($p['nama_proyek']); ?></td>
+                                            <tr class="clickable-row" onclick="window.location.href='../proyek/detail.php?id=<?php echo $p['id']; ?>';" title="Klik untuk melihat detail proyek <?php echo htmlspecialchars($p['nama_proyek']); ?>">
+                                                <td class="fw-semibold text-dark"><?php echo htmlspecialchars($p['nama_proyek']); ?></td>
                                                 <td><?php echo date('d M Y', strtotime($p['deadline'])); ?></td>
                                                 <td>
                                                     <?php 
@@ -359,7 +476,7 @@ $percentages = [
 
                 <!-- Recent Members Table -->
                 <div class="col-12 col-xl-6">
-                    <div class="card border-0 shadow-sm p-4 h-100">
+                    <div class="card p-4 h-100">
                         <h5 class="card-title fw-bold mb-3">5 Anggota Terbaru</h5>
                         <div class="table-responsive">
                             <table class="table table-hover table-custom mb-0">
@@ -373,15 +490,21 @@ $percentages = [
                                 <tbody>
                                     <?php if (empty($recentMembers)): ?>
                                         <tr>
-                                            <td colspan="3" class="text-center text-muted py-3">Belum ada anggota terdaftar.</td>
+                                            <td colspan="3" class="text-center py-5">
+                                                <div class="empty-state-container">
+                                                    <span class="empty-state-icon">👥</span>
+                                                    <h6 class="fw-bold text-dark mb-1">Belum Ada Anggota</h6>
+                                                    <p class="empty-state-text small">Mulai dengan menambahkan anggota pertama Anda.</p>
+                                                </div>
+                                            </td>
                                         </tr>
                                     <?php else: ?>
                                         <?php foreach ($recentMembers as $m): ?>
-                                            <tr>
-                                                <td class="d-flex align-items-center gap-2 fw-medium">
+                                            <tr class="clickable-row" onclick="window.location.href='../anggota/detail.php?id=<?php echo $m['id']; ?>';" title="Klik untuk melihat detail anggota <?php echo htmlspecialchars($m['nama']); ?>">
+                                                <td class="d-flex align-items-center gap-2 fw-semibold text-dark">
                                                     <?php 
                                                     $avatarPath = '../uploads/' . $m['foto'];
-                                                    if (!empty($m['foto']) && file_exists(__DIR__ . '/../' . $avatarPath)): 
+                                                    if (!empty($m['foto']) && file_exists(dirname(__DIR__) . '/uploads/' . $m['foto'])): 
                                                     ?>
                                                         <img src="<?php echo htmlspecialchars($avatarPath); ?>" alt="Avatar" class="avatar-mini">
                                                     <?php else: ?>
@@ -411,5 +534,43 @@ $percentages = [
 
 <!-- Bootstrap 5 Bundle JS via CDN -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Counter Animation Script -->
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const counters = [
+        { id: "val-users", target: <?php echo (int)$totalUsers; ?> },
+        { id: "val-anggota", target: <?php echo (int)$totalAnggota; ?> },
+        { id: "val-proyek", target: <?php echo (int)$totalProyek; ?> },
+        { id: "val-assignments", target: <?php echo (int)$totalAssignments; ?> }
+    ];
+
+    counters.forEach(c => {
+        const el = document.getElementById(c.id);
+        if (!el) return;
+        
+        const target = c.target;
+        if (target === 0) {
+            el.textContent = "0";
+            return;
+        }
+
+        let current = 0;
+        const duration = 1200; // Animation duration in ms
+        const stepTime = 20; // 50 fps
+        const increment = target / (duration / stepTime);
+
+        const timer = setInterval(() => {
+            current += increment;
+            if (current >= target) {
+                el.textContent = target;
+                clearInterval(timer);
+            } else {
+                el.textContent = Math.floor(current);
+            }
+        }, stepTime);
+    });
+});
+</script>
 </body>
 </html>

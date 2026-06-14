@@ -73,7 +73,7 @@ renderHeader('Detail Anggota', 'anggota', '../');
             <div class="my-4 d-flex justify-content-center">
                 <?php 
                 $avatarPath = '../uploads/' . $member['foto'];
-                if (!empty($member['foto']) && file_exists(__DIR__ . '/../' . $avatarPath)): 
+                if (!empty($member['foto']) && file_exists(dirname(__DIR__) . '/uploads/' . $member['foto'])): 
                 ?>
                     <img src="<?php echo htmlspecialchars($avatarPath); ?>" alt="Avatar" class="rounded-circle shadow-sm" style="width: 140px; height: 140px; object-fit: cover; border: 4px solid var(--border-color);">
                 <?php else: ?>

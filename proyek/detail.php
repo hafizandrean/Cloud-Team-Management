@@ -126,7 +126,7 @@ renderHeader('Detail Proyek', 'proyek', '../');
                                     <td>
                                         <?php 
                                         $avatarPath = '../uploads/' . $m['foto'];
-                                        if (!empty($m['foto']) && file_exists(__DIR__ . '/../' . $avatarPath)): 
+                                        if (!empty($m['foto']) && file_exists(dirname(__DIR__) . '/uploads/' . $m['foto'])): 
                                         ?>
                                             <img src="<?php echo htmlspecialchars($avatarPath); ?>" alt="Avatar" class="avatar-mini" style="width: 36px; height: 36px;">
                                         <?php else: ?>
