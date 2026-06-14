@@ -4,6 +4,7 @@
  */
 
 require_once __DIR__ . '/../config/layout.php';
+require_once __DIR__ . '/../config/activity_helper.php';
 
 $db = Database::getConnection();
 
@@ -53,6 +54,9 @@ try {
     $deleteQuery = "DELETE FROM anggota WHERE id = ?";
     $deleteStmt = $db->prepare($deleteQuery);
     $deleteStmt->execute([$id]);
+
+    // Write activity log
+    writeLog($db, $_SESSION['user_id'], 'DELETE_MEMBER', 'Menghapus anggota: ' . $member['nama']);
 
     $_SESSION['flash_success'] = 'Anggota berhasil dihapus.';
     header('Location: index.php');

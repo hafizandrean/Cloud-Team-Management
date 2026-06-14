@@ -1,29 +1,40 @@
 /**
- * Cloud Team Management - Custom Stylesheet (Modern Clean Minimalist)
+ * Cloud Team Management - Custom Stylesheet (Premium Glassmorphism Edition)
  */
 
 :root {
-    --bg-color: #f8fafc;
-    --card-bg: #ffffff;
+    --bg-color: #f3f4f6;
+    --card-bg: rgba(255, 255, 255, 0.7);
+    --card-border: rgba(255, 255, 255, 0.5);
     --primary-color: #6366f1;
     --primary-hover: #4f46e5;
+    --primary-glow: rgba(99, 102, 241, 0.15);
     --text-main: #0f172a;
     --text-muted: #64748b;
     --text-body: #334155;
-    --border-color: #e2e8f0;
+    --border-color: rgba(226, 232, 240, 0.8);
+    --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.04);
 }
 
 body {
-    background-color: var(--bg-color);
+    /* Subtle colorful mesh/radial background to make glassmorphism pop */
+    background: radial-gradient(circle at 0% 0%, rgba(99, 102, 241, 0.04) 0%, transparent 35%),
+                radial-gradient(circle at 100% 0%, rgba(14, 165, 233, 0.04) 0%, transparent 35%),
+                radial-gradient(circle at 50% 100%, rgba(16, 185, 129, 0.02) 0%, transparent 40%),
+                #f8fafc;
     color: var(--text-body);
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     overflow-x: hidden;
+    min-height: 100vh;
 }
 
 /* Custom Navbar */
 .navbar-custom {
-    background-color: #ffffff;
-    border-bottom: 1px solid var(--border-color);
+    background: rgba(255, 255, 255, 0.75) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--card-border);
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.03);
 }
 
 .navbar-brand-custom {
@@ -41,17 +52,20 @@ body {
     height: 28px;
     background-color: rgba(99, 102, 241, 0.1);
     color: var(--primary-color);
-    border-radius: 6px;
+    border-radius: 8px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     font-weight: 700;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1);
 }
 
 /* Sidebar Styling */
 .sidebar {
-    background-color: #ffffff;
-    border-right: 1px solid var(--border-color);
+    background: rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-right: 1px solid var(--card-border);
     min-height: calc(100vh - 57px);
     padding: 24px 16px;
     transition: all 0.3s ease;
@@ -79,79 +93,92 @@ body {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 10px 16px;
+    padding: 11px 16px;
     color: var(--text-muted);
     text-decoration: none;
     font-size: 14px;
     font-weight: 500;
-    border-radius: 8px;
-    transition: all 0.2s ease;
+    border-radius: 10px;
+    transition: all 0.25s ease;
 }
 
 .sidebar-item a:hover {
     color: var(--primary-color);
-    background-color: rgba(99, 102, 241, 0.05);
+    background-color: rgba(99, 102, 241, 0.06);
+    transform: translateX(2px);
 }
 
 .sidebar-item.active a {
     color: var(--primary-color);
     background-color: rgba(99, 102, 241, 0.08);
     font-weight: 600;
+    box-shadow: inset 0 0 0 1px rgba(99, 102, 241, 0.05);
 }
 
 .sidebar-item.disabled a {
     pointer-events: none;
-    opacity: 0.5;
+    opacity: 0.45;
 }
 
 .sidebar-item.disabled span.coming-soon {
-    font-size: 10px;
-    background-color: #f1f5f9;
+    font-size: 9px;
+    background-color: rgba(241, 245, 249, 0.6);
     color: #94a3b8;
     padding: 2px 6px;
     border-radius: 4px;
     margin-left: auto;
-    font-weight: 500;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
 }
 
-/* Dashboard Cards */
+/* Glassmorphism Cards */
+.card, .card-summary {
+    background: var(--card-bg) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border: 1px solid var(--card-border) !important;
+    border-radius: 16px !important;
+    box-shadow: var(--glass-shadow) !important;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s ease;
+}
+
+.card:hover, .card-summary:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px 0 rgba(99, 102, 241, 0.07) !important;
+    border-color: rgba(99, 102, 241, 0.25) !important;
+}
+
+/* Summary Cards specific layout */
 .card-summary {
-    background-color: #ffffff;
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 20px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.card-summary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    padding: 24px;
 }
 
 .card-summary-title {
-    font-size: 13px;
+    font-size: 11px;
     color: var(--text-muted);
-    font-weight: 500;
-    margin-bottom: 6px;
+    font-weight: 600;
+    margin-bottom: 8px;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.8px;
 }
 
 .card-summary-value {
-    font-size: 28px;
+    font-size: 30px;
     font-weight: 700;
     color: var(--text-main);
+    line-height: 1;
 }
 
 .card-summary-icon {
     font-size: 24px;
-    width: 44px;
-    height: 44px;
-    border-radius: 10px;
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.02);
 }
 
 .card-summary-icon.users { background-color: rgba(99, 102, 241, 0.1); color: var(--primary-color); }
@@ -159,33 +186,59 @@ body {
 .card-summary-icon.proyek { background-color: rgba(16, 185, 129, 0.1); color: #10b981; }
 .card-summary-icon.assignment { background-color: rgba(245, 158, 11, 0.1); color: #f59e0b; }
 
+/* Custom Form elements to fit Glass theme */
+.form-control, .form-select {
+    background: rgba(255, 255, 255, 0.5) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 10px !important;
+    padding: 10px 16px;
+    color: var(--text-main);
+    transition: all 0.25s ease;
+}
+
+.form-control:focus, .form-select:focus {
+    background: rgba(255, 255, 255, 0.9) !important;
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 0 0 4px var(--primary-glow) !important;
+    outline: none;
+}
+
 /* Custom Table */
 .table-custom {
-    background-color: #ffffff;
-    border: 1px solid var(--border-color);
+    background-color: transparent !important;
+    border: none !important;
     border-radius: 12px;
     overflow: hidden;
 }
 
 .table-custom th {
-    background-color: #fafafa;
-    border-bottom: 1px solid var(--border-color);
+    background-color: rgba(248, 250, 252, 0.5) !important;
+    border-bottom: 1px solid var(--border-color) !important;
     font-weight: 600;
     font-size: 13px;
     color: var(--text-main);
-    padding: 14px 16px;
+    padding: 16px 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .table-custom td {
-    padding: 14px 16px;
+    padding: 16px 20px;
     font-size: 14px;
     vertical-align: middle;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.5);
+    background-color: transparent !important;
+}
+
+.table-responsive {
+    border-radius: 12px;
+    overflow: hidden;
 }
 
 /* Profile Avatar Mini */
 .avatar-mini {
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
     background-color: var(--primary-color);
     color: #ffffff;
@@ -193,12 +246,46 @@ body {
     align-items: center;
     justify-content: center;
     font-weight: 600;
-    font-size: 12px;
+    font-size: 13px;
     object-fit: cover;
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 }
 
 /* Badges */
-.badge-planning { background-color: #f1f5f9; color: #64748b; }
-.badge-progress { background-color: #e0f2fe; color: #0369a1; }
-.badge-completed { background-color: #dcfce7; color: #15803d; }
-.badge-suspended { background-color: #fee2e2; color: #b91c1c; }
+.badge {
+    padding: 6px 12px !important;
+    border-radius: 6px !important;
+    font-weight: 500 !important;
+    font-size: 12px !important;
+}
+.badge-planning { background-color: rgba(241, 245, 249, 0.8) !important; color: #64748b !important; border: 1px solid rgba(148, 163, 184, 0.1) !important; }
+.badge-progress { background-color: rgba(224, 242, 254, 0.8) !important; color: #0369a1 !important; border: 1px solid rgba(14, 165, 233, 0.1) !important; }
+.badge-completed { background-color: rgba(220, 252, 231, 0.8) !important; color: #15803d !important; border: 1px solid rgba(34, 197, 94, 0.1) !important; }
+.badge-suspended { background-color: rgba(254, 226, 230, 0.8) !important; color: #b91c1c !important; border: 1px solid rgba(239, 68, 68, 0.1) !important; }
+
+/* Progress bar modernizer */
+.progress {
+    background-color: rgba(241, 245, 249, 0.8);
+    border-radius: 8px;
+    overflow: hidden;
+}
+.progress-bar {
+    border-radius: 8px;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.3);
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.5);
+}

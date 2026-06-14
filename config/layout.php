@@ -85,27 +85,24 @@ function renderHeader($title, $activeMenu = 'dashboard', $basePath = '../') {
                         </a>
                     </li>
                     <!-- Proyek -->
-                    <li class="sidebar-item <?php echo $activeMenu === 'proyek' ? 'active' : ''; ?> disabled">
-                        <a href="#" id="nav-proyek">
+                    <li class="sidebar-item <?php echo $activeMenu === 'proyek' ? 'active' : ''; ?>">
+                        <a href="<?php echo $basePath; ?>proyek/index.php" id="nav-proyek">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
                             <span>Proyek</span>
-                            <span class="coming-soon">Soon</span>
                         </a>
                     </li>
                     <!-- Assignment -->
-                    <li class="sidebar-item <?php echo $activeMenu === 'assignment' ? 'active' : ''; ?> disabled">
-                        <a href="#" id="nav-assignment">
+                    <li class="sidebar-item <?php echo $activeMenu === 'assignment' ? 'active' : ''; ?>">
+                        <a href="<?php echo $basePath; ?>assignment/index.php" id="nav-assignment">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><polyline points="16 11 18 13 22 9"></polyline></svg>
                             <span>Assignment</span>
-                            <span class="coming-soon">Soon</span>
                         </a>
                     </li>
                     <!-- Activity Log -->
-                    <li class="sidebar-item <?php echo $activeMenu === 'activity' ? 'active' : ''; ?> disabled">
-                        <a href="#" id="nav-activity">
+                    <li class="sidebar-item <?php echo $activeMenu === 'activity' ? 'active' : ''; ?>">
+                        <a href="<?php echo $basePath; ?>activity-log/index.php" id="nav-activity">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                             <span>Activity Log</span>
-                            <span class="coming-soon">Soon</span>
                         </a>
                     </li>
                 </ul>
@@ -159,9 +156,8 @@ function renderFooter($basePath = '../') {
         $basePath .= '/';
     }
     ?>
-            <!-- Footer -->
             <footer class="text-center text-muted small mt-5 pt-3 border-top">
-                Cloud Team Management v1.0 &copy; 2026 Kelompok X
+                Cloud Team Management v1.3 &copy; 2026 Kelompok 2
             </footer>
         </main>
     </div>
