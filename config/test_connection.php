@@ -27,26 +27,28 @@ try {
 
     // 3. Query Proyek Table
     echo "--- Proyek Table ---\n";
-    $stmt = $db->query("SELECT id, nama_proyek, tanggal_mulai, tanggal_selesai, status FROM proyek");
+    $stmt = $db->query("SELECT id, nama_proyek, deadline, status FROM proyek");
     $proyekList = $stmt->fetchAll();
     foreach ($proyekList as $p) {
-        echo sprintf("ID: %d | Project: %-25s | Range: %s to %s | Status: %s\n", 
-            $p['id'], $p['nama_proyek'], $p['tanggal_mulai'], $p['tanggal_selesai'], $p['status']);
+        echo sprintf("ID: %d | Project: %-25s | Deadline: %s | Status: %s\n", 
+            $p['id'], $p['nama_proyek'], $p['deadline'], $p['status']);
     }
     echo "\n";
 
     // 4. Query Anggota Table
     echo "--- Anggota Table ---\n";
     $stmt = $db->query("
-        SELECT a.id, a.nama, a.nip_nim, a.jabatan, a.foto, p.nama_proyek, u.username 
+        SELECT a.id, a.nama, a.nim, a.foto, u.username, GROUP_CONCAT(p.nama_proyek SEPARATOR ', ') AS proyek_assigned
         FROM anggota a
-        LEFT JOIN proyek p ON a.id_proyek = p.id
         LEFT JOIN users u ON a.id_user = u.id
+        LEFT JOIN anggota_proyek ap ON a.id = ap.anggota_id
+        LEFT JOIN proyek p ON ap.proyek_id = p.id
+        GROUP BY a.id
     ");
     $anggotaList = $stmt->fetchAll();
     foreach ($anggotaList as $a) {
-        echo sprintf("ID: %d | Name: %-18s | NIP/NIM: %-11s | Job: %-15s | Photo: %-10s | Project: %-22s | User: %s\n", 
-            $a['id'], $a['nama'], $a['nip_nim'], $a['jabatan'], $a['foto'] ?? 'None', $a['nama_proyek'] ?? 'None', $a['username'] ?? 'None');
+        echo sprintf("ID: %d | Name: %-18s | NIM: %-11s | Photo: %-10s | User: %-8s | Projects: %s\n", 
+            $a['id'], $a['nama'], $a['nim'], $a['foto'] ?? 'None', $a['username'] ?? 'None', $a['proyek_assigned'] ?? 'None');
     }
     echo "\n";
     echo "============================================\n";
