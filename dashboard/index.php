@@ -112,11 +112,10 @@ $percentages = [
                             <span>Dashboard</span>
                         </a>
                     </li>
-                    <li class="sidebar-item disabled">
-                        <a href="#" id="nav-anggota">
+                    <li class="sidebar-item">
+                        <a href="../anggota/index.php" id="nav-anggota">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
                             <span>Anggota</span>
-                            <span class="coming-soon">Soon</span>
                         </a>
                     </li>
                     <li class="sidebar-item disabled">
@@ -300,10 +299,10 @@ $percentages = [
                     <div class="card h-100 shadow-sm border-0 p-4">
                         <h5 class="card-title fw-bold mb-3">Aksi Cepat</h5>
                         <div class="d-flex flex-column gap-3">
-                            <a href="#" class="btn btn-light border text-start py-3 px-3 disabled" style="opacity: 0.65;">
+                            <a href="../anggota/index.php" class="btn btn-light border text-start py-3 px-3">
                                 <div class="d-flex align-items-center gap-2">
                                     <span>👥</span>
-                                    <span class="fw-medium small">Kelola Anggota (Belum Tersedia)</span>
+                                    <span class="fw-medium small">Kelola Anggota</span>
                                 </div>
                             </a>
                             <a href="#" class="btn btn-light border text-start py-3 px-3 disabled" style="opacity: 0.65;">
