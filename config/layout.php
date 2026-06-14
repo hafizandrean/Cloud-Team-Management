@@ -7,6 +7,9 @@
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/database.php';
 
+// Enforce authentication and start session immediately for all pages using the layout helper
+requireLogin();
+
 /**
  * Renders the top page header, CSS links, navbar, sidebar, and opens the main content area.
  * 
@@ -55,7 +58,38 @@ function renderHeader($title, $activeMenu = 'dashboard', $basePath = '../') {
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
             <div class="ms-auto d-none d-md-flex align-items-center gap-3">
-                <span class="text-muted small">Halo, <strong><?php echo htmlspecialchars($currentUser['nama'] ?? $currentUser['username']); ?></strong></span>
+                <?php 
+                $foto = $currentUser['foto'] ?? '';
+                $absoluteFotoPath = dirname(__DIR__) . '/uploads/' . $foto;
+                $navAvatarPath = $basePath . 'uploads/' . $foto;
+                
+                // Get the associated anggota ID for profile link
+                $layoutDb = Database::getConnection();
+                $layoutStmt = $layoutDb->prepare("SELECT id FROM anggota WHERE id_user = ?");
+                $layoutStmt->execute([$currentUser['id']]);
+                $layoutAnggotaId = $layoutStmt->fetchColumn() ?: null;
+                
+                // Determine target link
+                if ($layoutAnggotaId) {
+                    $profileUrl = $basePath . 'anggota/detail.php?id=' . $layoutAnggotaId;
+                    $profileTooltip = 'Lihat Detail Profil Anda';
+                } else {
+                    $profileUrl = '#';
+                    $profileTooltip = 'Akun Anda tidak tertaut dengan data anggota.';
+                }
+                ?>
+                <a href="<?php echo htmlspecialchars($profileUrl); ?>" class="d-flex align-items-center gap-2 text-decoration-none nav-profile-link" title="<?php echo htmlspecialchars($profileTooltip); ?>">
+                    <?php if (!empty($foto) && file_exists($absoluteFotoPath)): 
+                        $version = filemtime($absoluteFotoPath);
+                    ?>
+                        <img src="<?php echo htmlspecialchars($navAvatarPath . '?v=' . $version); ?>" alt="Avatar" class="avatar-mini rounded-circle" style="width: 30px; height: 30px; object-fit: cover;" loading="lazy">
+                    <?php else: ?>
+                        <div class="avatar-mini rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center text-uppercase fw-bold" style="width: 30px; height: 30px; font-size: 12px; border: 2px solid rgba(255, 255, 255, 0.8);">
+                            <?php echo htmlspecialchars(substr($currentUser['nama'] ?? $currentUser['username'], 0, 1)); ?>
+                        </div>
+                    <?php endif; ?>
+                    <span class="text-muted small">Halo, <strong class="text-dark"><?php echo htmlspecialchars($currentUser['nama'] ?? $currentUser['username']); ?></strong></span>
+                </a>
                 <form action="<?php echo $basePath; ?>auth/logout.php" method="POST" class="m-0">
                     <button type="submit" class="btn btn-outline-danger btn-sm py-1 px-3">Keluar</button>
                 </form>

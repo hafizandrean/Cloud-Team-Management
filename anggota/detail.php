@@ -69,35 +69,45 @@ renderHeader('Detail Anggota', 'anggota', '../');
 <div class="row g-4">
     <!-- Profile Card (Left Column) -->
     <div class="col-12 col-md-5 col-lg-4">
-        <div class="card border-0 shadow-sm p-4 text-center h-100">
+        <div class="card p-4 text-center h-100">
             <div class="my-4 d-flex justify-content-center">
-                <?php 
-                $avatarPath = '../uploads/' . $member['foto'];
-                if (!empty($member['foto']) && file_exists(dirname(__DIR__) . '/uploads/' . $member['foto'])): 
-                ?>
-                    <img src="<?php echo htmlspecialchars($avatarPath); ?>" alt="Avatar" class="rounded-circle shadow-sm" style="width: 140px; height: 140px; object-fit: cover; border: 4px solid var(--border-color);">
-                <?php else: ?>
-                    <div class="rounded-circle d-flex align-items-center justify-content-center text-uppercase fw-bold shadow-sm" style="width: 140px; height: 140px; font-size: 52px; background-color: var(--primary-color); color: #ffffff; border: 4px solid var(--border-color);">
-                        <?php echo htmlspecialchars(substr($member['nama'], 0, 1)); ?>
+                <div class="profile-avatar-container" style="cursor: default; pointer-events: none;">
+                    <div class="profile-avatar-inner">
+                        <?php 
+                        $avatarPath = '../uploads/' . $member['foto'];
+                        if (!empty($member['foto']) && file_exists(dirname(__DIR__) . '/uploads/' . $member['foto'])): 
+                        ?>
+                            <img src="<?php echo htmlspecialchars($avatarPath); ?>" alt="Avatar" class="profile-avatar-img">
+                        <?php else: ?>
+                            <div class="profile-avatar-placeholder text-uppercase fw-bold">
+                                <?php echo htmlspecialchars(substr($member['nama'], 0, 1)); ?>
+                            </div>
+                        <?php endif; ?>
                     </div>
-                <?php endif; ?>
+                </div>
             </div>
             
             <h4 class="fw-bold text-dark mb-1"><?php echo htmlspecialchars($member['nama']); ?></h4>
             <p class="text-muted small mb-3">NIM: <?php echo htmlspecialchars($member['nim']); ?></p>
             
-            <div class="badge bg-light text-muted border py-2 px-3 text-capitalize rounded-pill">
-                <?php echo !empty($member['id_user']) ? 'Terkait Akun CTM' : 'Tanpa Akun User'; ?>
+            <div class="d-flex justify-content-center mb-4">
+                <span class="badge bg-light text-muted border px-3 py-2 text-capitalize rounded-pill" style="font-size: 11px;">
+                    <?php echo !empty($member['id_user']) ? 'Terkait Akun CTM' : 'Tanpa Akun User'; ?>
+                </span>
             </div>
             
-            <div class="mt-4 pt-3 border-top text-start">
-                <div class="mb-3">
-                    <span class="text-muted d-block small">Alamat Email</span>
-                    <strong class="text-dark small d-block text-truncate"><?php echo htmlspecialchars($member['email'] ?? '-'); ?></strong>
+            <div class="user-stats-grid d-flex justify-content-around mt-auto pt-3 border-top w-100">
+                <div class="stat-item text-center px-2">
+                    <span class="text-muted d-block small mb-1" style="font-size: 11px;">Alamat Email</span>
+                    <span class="fw-semibold text-dark small text-truncate d-block" style="max-width: 140px;" title="<?php echo htmlspecialchars($member['email'] ?? '-'); ?>">
+                        <?php echo htmlspecialchars($member['email'] ?? '-'); ?>
+                    </span>
                 </div>
-                <div>
-                    <span class="text-muted d-block small">Bergabung Sejak</span>
-                    <strong class="text-dark small"><?php echo date('d F Y', strtotime($member['created_at'])); ?></strong>
+                <div class="stat-item text-center px-2 border-start">
+                    <span class="text-muted d-block small mb-1" style="font-size: 11px;">Bergabung Sejak</span>
+                    <span class="fw-semibold text-dark small">
+                        <?php echo date('d M Y', strtotime($member['created_at'])); ?>
+                    </span>
                 </div>
             </div>
         </div>

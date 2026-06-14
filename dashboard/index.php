@@ -3,8 +3,7 @@
  * Cloud Team Management - Dashboard Page (Protected)
  */
 
-require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../config/auth.php';
+require_once __DIR__ . '/../config/layout.php';
 require_once __DIR__ . '/../config/activity_helper.php';
 
 // Enforce authentication
@@ -37,73 +36,161 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['profile_photo'])) {
         $fileSize = $file['size'];
         
         $fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
-        $allowedExtensions = ['jpg', 'jpeg', 'png'];
+        $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
         
-        if (in_array($fileExt, $allowedExtensions) && $fileSize <= 2 * 1024 * 1024) {
-            $newFotoFilename = 'anggota/' . uniqid() . '.' . $fileExt;
-            $uploadTarget = __DIR__ . '/../uploads/' . $newFotoFilename;
-            
-            // Ensure uploads/anggota directory exists
-            if (!is_dir(__DIR__ . '/../uploads/anggota')) {
-                mkdir(__DIR__ . '/../uploads/anggota', 0777, true);
-            }
-            
-            if (move_uploaded_file($fileTmpName, $uploadTarget)) {
-                try {
-                    $db = Database::getConnection();
+        // 1. Validate Extension
+        if (in_array($fileExt, $allowedExtensions)) {
+            // 2. Validate Size (Max 5 MB)
+            if ($fileSize <= 5 * 1024 * 1024) {
+                // 3. Validate MIME Type
+                $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                $mimeType = finfo_file($finfo, $fileTmpName);
+                finfo_close($finfo);
+                
+                $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+                if (in_array($mimeType, $allowedMimeTypes)) {
+                    // Generate secure random filename
+                    $randomName = bin2hex(random_bytes(16));
+                    $newFotoFilename = 'anggota/' . $randomName . '.' . $fileExt;
                     
-                    // Check if user has an anggota record
-                    $stmt = $db->prepare("SELECT id, foto FROM anggota WHERE id_user = ?");
-                    $stmt->execute([$currentUser['id']]);
-                    $member = $stmt->fetch();
+                    // Target directories
+                    $uploadTargetDir = dirname(__DIR__) . '/uploads/anggota';
+                    if (!is_dir($uploadTargetDir)) {
+                        mkdir($uploadTargetDir, 0777, true);
+                    }
+                    $uploadTarget = dirname(__DIR__) . '/uploads/' . $newFotoFilename;
                     
-                    if ($member) {
-                        // Delete old photo if exists
-                        if (!empty($member['foto'])) {
-                            $oldFile = __DIR__ . '/../uploads/' . $member['foto'];
-                            if (file_exists($oldFile) && is_file($oldFile)) {
-                                unlink($oldFile);
+                    $uploadSuccess = false;
+                    
+                    // 4. GD Resizing & Compression (with Fallback)
+                    if (extension_loaded('gd')) {
+                        list($width, $height, $type) = getimagesize($fileTmpName);
+                        if ($width && $height) {
+                            $maxDim = 800;
+                            $newWidth = $width;
+                            $newHeight = $height;
+                            
+                            // Scale down keeping aspect ratio
+                            if ($width > $maxDim || $height > $maxDim) {
+                                $ratio = $width / $height;
+                                if ($ratio > 1) {
+                                    $newWidth = $maxDim;
+                                    $newHeight = round($maxDim / $ratio);
+                                } else {
+                                    $newHeight = $maxDim;
+                                    $newWidth = round($maxDim * $ratio);
+                                }
+                            }
+                            
+                            $dst = imagecreatetruecolor($newWidth, $newHeight);
+                            
+                            // Load image source based on type
+                            $src = null;
+                            switch ($type) {
+                                case IMAGETYPE_JPEG:
+                                    $src = @imagecreatefromjpeg($fileTmpName);
+                                    break;
+                                case IMAGETYPE_PNG:
+                                    $src = @imagecreatefrompng($fileTmpName);
+                                    if ($src) {
+                                        imagealphablending($dst, false);
+                                        imagesavealpha($dst, true);
+                                    }
+                                    break;
+                                case IMAGETYPE_WEBP:
+                                    $src = @imagecreatefromwebp($fileTmpName);
+                                    break;
+                            }
+                            
+                            if ($src) {
+                                imagecopyresampled($dst, $src, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
+                                
+                                // Save and compress
+                                switch ($type) {
+                                    case IMAGETYPE_JPEG:
+                                        $uploadSuccess = imagejpeg($dst, $uploadTarget, 85);
+                                        break;
+                                    case IMAGETYPE_PNG:
+                                        $uploadSuccess = imagepng($dst, $uploadTarget, 6);
+                                        break;
+                                    case IMAGETYPE_WEBP:
+                                        $uploadSuccess = imagewebp($dst, $uploadTarget, 80);
+                                        break;
+                                }
+                                
+                                imagedestroy($src);
+                                imagedestroy($dst);
                             }
                         }
-                        
-                        // Update existing anggota record
-                        $updateStmt = $db->prepare("UPDATE anggota SET foto = ?, updated_at = NOW() WHERE id = ?");
-                        $updateStmt->execute([$newFotoFilename, $member['id']]);
-                    } else {
-                        // Create a new anggota record for the user
-                        $uStmt = $db->prepare("SELECT email, username FROM users WHERE id = ?");
-                        $uStmt->execute([$currentUser['id']]);
-                        $userObj = $uStmt->fetch();
-                        
-                        $userEmail = $userObj['email'] ?? ($currentUser['username'] . '@cloudteam.com');
-                        $userNama = $currentUser['nama'] ?: $currentUser['username'];
-                        $dummyNim = '22' . str_pad($currentUser['id'], 8, '0', STR_PAD_LEFT);
-                        
-                        $insertStmt = $db->prepare("
-                            INSERT INTO anggota (nama, nim, email, foto, id_user, created_at, updated_at)
-                            VALUES (?, ?, ?, ?, ?, NOW(), NOW())
-                        ");
-                        $insertStmt->execute([$userNama, $dummyNim, $userEmail, $newFotoFilename, $currentUser['id']]);
                     }
                     
-                    // Update session variable
-                    startSession();
-                    $_SESSION['foto'] = $newFotoFilename;
+                    // Fallback to move_uploaded_file if GD is disabled or failed
+                    if (!$uploadSuccess) {
+                        $uploadSuccess = move_uploaded_file($fileTmpName, $uploadTarget);
+                    }
                     
-                    // Log activity
-                    writeLog($db, $currentUser['id'], 'UPDATE_MEMBER', 'Mengubah foto profil');
-                    
-                    $_SESSION['flash_success'] = 'Foto profil berhasil diperbarui.';
-                    header("Location: index.php");
-                    exit;
-                } catch (Exception $e) {
-                    $errorMsg = 'Gagal menyimpan foto profil ke database: ' . $e->getMessage();
+                    if ($uploadSuccess) {
+                        try {
+                            $db = Database::getConnection();
+                            
+                            // Check if user has an anggota record
+                            $stmt = $db->prepare("SELECT id, foto FROM anggota WHERE id_user = ?");
+                            $stmt->execute([$currentUser['id']]);
+                            $member = $stmt->fetch();
+                            
+                            if ($member) {
+                                // Delete old photo if exists
+                                if (!empty($member['foto'])) {
+                                    $oldFile = dirname(__DIR__) . '/uploads/' . $member['foto'];
+                                    if (file_exists($oldFile) && is_file($oldFile)) {
+                                        @unlink($oldFile);
+                                    }
+                                }
+                                
+                                // Update existing anggota record
+                                $updateStmt = $db->prepare("UPDATE anggota SET foto = ?, updated_at = NOW() WHERE id = ?");
+                                $updateStmt->execute([$newFotoFilename, $member['id']]);
+                            } else {
+                                // Create a new anggota record for the user
+                                $uStmt = $db->prepare("SELECT email, username FROM users WHERE id = ?");
+                                $uStmt->execute([$currentUser['id']]);
+                                $userObj = $uStmt->fetch();
+                                
+                                $userEmail = $userObj['email'] ?? ($currentUser['username'] . '@cloudteam.com');
+                                $userNama = $currentUser['nama'] ?: $currentUser['username'];
+                                $dummyNim = '22' . str_pad($currentUser['id'], 8, '0', STR_PAD_LEFT);
+                                
+                                $insertStmt = $db->prepare("
+                                    INSERT INTO anggota (nama, nim, email, foto, id_user, created_at, updated_at)
+                                    VALUES (?, ?, ?, ?, ?, NOW(), NOW())
+                                ");
+                                $insertStmt->execute([$userNama, $dummyNim, $userEmail, $newFotoFilename, $currentUser['id']]);
+                            }
+                            
+                            // Update session variable
+                            startSession();
+                            $_SESSION['foto'] = $newFotoFilename;
+                            
+                            // Log activity
+                            writeLog($db, $currentUser['id'], 'UPDATE_MEMBER', 'Mengubah foto profil');
+                            
+                            $_SESSION['flash_success'] = 'Foto profil berhasil diperbarui.';
+                            header("Location: index.php");
+                            exit;
+                        } catch (Exception $e) {
+                            $errorMsg = 'Gagal menyimpan foto profil ke database: ' . $e->getMessage();
+                        }
+                    } else {
+                        $errorMsg = 'Gagal memindahkan berkas foto.';
+                    }
+                } else {
+                    $errorMsg = 'Tipe MIME berkas tidak diizinkan. Harap unggah gambar JPG, JPEG, PNG, atau WEBP yang valid.';
                 }
             } else {
-                $errorMsg = 'Gagal memindahkan berkas foto.';
+                $errorMsg = 'Ukuran berkas melebihi batas maksimal 5MB.';
             }
         } else {
-            $errorMsg = 'Berkas harus berupa JPG, JPEG, atau PNG dengan ukuran maksimal 2MB.';
+            $errorMsg = 'Ekstensi berkas tidak diizinkan. Hanya JPG, JPEG, PNG, dan WEBP yang didukung.';
         }
     } else {
         $errorMsg = 'Terjadi kesalahan saat mengunggah berkas.';
@@ -146,100 +233,10 @@ $percentages = [
     'tertunda' => $totalProyekSum > 0 ? round(($statusCounts['tertunda'] / $totalProyekSum) * 100) : 0,
 ];
 ?>
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Cloud Team Management</title>
-    <!-- Bootstrap 5 CSS via CDN -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Google Fonts: Inter -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Custom Style -->
-    <link href="../assets/css/style.css" rel="stylesheet">
-</head>
-<body>
-
-<!-- Navbar -->
-<nav class="navbar navbar-expand-md navbar-custom sticky-top py-2 px-3">
-    <div class="container-fluid">
-        <a class="navbar-brand navbar-brand-custom" href="#">
-            <span class="navbar-brand-icon">C</span>
-            <span>Cloud Team Management</span>
-        </a>
-        <button class="navbar-toggler d-md-none collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <div class="ms-auto d-none d-md-flex align-items-center gap-3">
-                <span class="text-muted small">Halo, <strong><?php echo htmlspecialchars($currentUser['nama']); ?></strong></span>
-                <form action="../auth/logout.php" method="POST" class="m-0">
-                    <button type="submit" class="btn btn-outline-danger btn-sm py-1 px-3">Keluar</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</nav>
-
-<div class="container-fluid">
-    <div class="row">
-        <!-- Sidebar Navigation -->
-        <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block sidebar collapse">
-            <div class="sidebar-sticky-wrapper">
-                <ul class="sidebar-menu">
-                    <li class="sidebar-item active">
-                        <a href="index.php" id="nav-dashboard">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-                            <span>Dashboard</span>
-                        </a>
-                    </li>
-                    <li class="sidebar-item">
-                        <a href="../anggota/index.php" id="nav-anggota">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
-                            <span>Anggota</span>
-                        </a>
-                    </li>
-                    <li class="sidebar-item">
-                        <a href="../proyek/index.php" id="nav-proyek">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-                            <span>Proyek</span>
-                        </a>
-                    </li>
-                    <li class="sidebar-item">
-                        <a href="../assignment/index.php" id="nav-assignment">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><polyline points="16 11 18 13 22 9"></polyline></svg>
-                            <span>Assignment</span>
-                        </a>
-                    </li>
-                    <li class="sidebar-item">
-                        <a href="../activity-log/index.php" id="nav-activity">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                            <span>Activity Log</span>
-                        </a>
-                    </li>
-                    <li class="sidebar-item">
-                        <a href="../reports/index.php" id="nav-reports">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
-                            <span>Reports</span>
-                        </a>
-                    </li>
-                </ul>
-                <div class="sidebar-item border-top pt-3 mb-2">
-                    <form action="../auth/logout.php" method="POST" class="w-100">
-                        <button type="submit" class="btn btn-outline-danger btn-sm w-100 d-flex align-items-center justify-content-center gap-2 py-2" id="btn-logout-sidebar">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-                            <span>Keluar</span>
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </nav>
-
-        <!-- Main Content Workspace -->
-        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4">
+<?php
+// Render Header using layout helper
+renderHeader('Dashboard', 'dashboard', '../');
+?>
             <?php if (!empty($errorMsg)): ?>
                 <div class="alert alert-danger" role="alert"><?php echo htmlspecialchars($errorMsg); ?></div>
             <?php endif; ?>
@@ -297,128 +294,87 @@ $percentages = [
 
             <!-- Widgets Grid -->
             <div class="row g-4 mb-4">
-                <!-- Project Status Summary -->
-                <div class="col-12 col-md-4">
-                    <div class="card h-100 p-4">
-                        <h5 class="card-title fw-bold mb-3">Ringkasan Status Proyek</h5>
-                        
-                        <div class="mb-3">
-                            <a href="../proyek/index.php?status=direncanakan" class="clickable-status-item" title="<?php echo $statusCounts['direncanakan']; ?> proyek dalam tahap perencanaan">
-                                <div class="d-flex justify-content-between small mb-1">
-                                    <span class="fw-medium">Planning</span>
-                                    <span class="fw-bold text-muted"><?php echo $statusCounts['direncanakan']; ?></span>
-                                </div>
-                                <div class="progress" style="height: 8px;">
-                                    <div class="progress-bar bg-secondary" role="progressbar" style="width: <?php echo $percentages['direncanakan']; ?>%" aria-valuenow="<?php echo $percentages['direncanakan']; ?>" aria-valuemin="0" aria-valuemax="100"></div>
-                                </div>
-                            </a>
-                        </div>
-
-                        <div class="mb-3">
-                            <a href="../proyek/index.php?status=berjalan" class="clickable-status-item" title="<?php echo $statusCounts['berjalan']; ?> proyek sedang berjalan">
-                                <div class="d-flex justify-content-between small mb-1">
-                                    <span class="fw-medium">On Progress</span>
-                                    <span class="fw-bold text-primary"><?php echo $statusCounts['berjalan']; ?></span>
-                                </div>
-                                <div class="progress" style="height: 8px;">
-                                    <div class="progress-bar bg-primary" role="progressbar" style="width: <?php echo $percentages['berjalan']; ?>%" aria-valuenow="<?php echo $percentages['berjalan']; ?>" aria-valuemin="0" aria-valuemax="100"></div>
-                                </div>
-                            </a>
-                        </div>
-
-                        <div class="mb-3">
-                            <a href="../proyek/index.php?status=selesai" class="clickable-status-item" title="<?php echo $statusCounts['selesai']; ?> proyek telah selesai">
-                                <div class="d-flex justify-content-between small mb-1">
-                                    <span class="fw-medium">Completed</span>
-                                    <span class="fw-bold text-success"><?php echo $statusCounts['selesai']; ?></span>
-                                </div>
-                                <div class="progress" style="height: 8px;">
-                                    <div class="progress-bar bg-success" role="progressbar" style="width: <?php echo $percentages['selesai']; ?>%" aria-valuenow="<?php echo $percentages['selesai']; ?>" aria-valuemin="0" aria-valuemax="100"></div>
-                                </div>
-                            </a>
-                        </div>
-
-                        <div>
-                            <a href="../proyek/index.php?status=tertunda" class="clickable-status-item" title="<?php echo $statusCounts['tertunda']; ?> proyek ditangguhkan">
-                                <div class="d-flex justify-content-between small mb-1">
-                                    <span class="fw-medium">Suspended</span>
-                                    <span class="fw-bold text-danger"><?php echo $statusCounts['tertunda']; ?></span>
-                                </div>
-                                <div class="progress" style="height: 8px;">
-                                    <div class="progress-bar bg-danger" role="progressbar" style="width: <?php echo $percentages['tertunda']; ?>%" aria-valuenow="<?php echo $percentages['tertunda']; ?>" aria-valuemin="0" aria-valuemax="100"></div>
-                                </div>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Account Information Widget -->
-                <div class="col-12 col-md-4">
-                    <div class="card h-100 p-4">
-                        <h5 class="card-title fw-bold mb-3 text-center">Informasi Akun</h5>
-                        
-                        <!-- Profile Form for Avatar Upload -->
-                        <form id="profile-photo-form" action="index.php" method="POST" enctype="multipart/form-data" class="d-flex flex-column align-items-center mb-4">
-                            <input type="file" name="profile_photo" id="profile-photo-input" accept="image/png, image/jpeg, image/jpg" style="display:none;" onchange="document.getElementById('profile-photo-form').submit();">
-                            
-                            <div class="profile-avatar-container cursor-pointer" onclick="document.getElementById('profile-photo-input').click();" title="Klik untuk mengubah foto profil">
-                                <?php 
-                                $photoPath = '../uploads/' . $currentUser['foto'];
-                                if (!empty($currentUser['foto']) && file_exists(dirname(__DIR__) . '/uploads/' . $currentUser['foto'])): 
-                                ?>
-                                    <img src="<?php echo htmlspecialchars($photoPath); ?>" alt="Avatar" class="profile-avatar-img">
-                                <?php else: ?>
-                                    <div class="profile-avatar-placeholder text-uppercase fw-bold">
-                                        <?php echo htmlspecialchars(substr($currentUser['nama'], 0, 1)); ?>
-                                    </div>
-                                <?php endif; ?>
+                <!-- Status & Quick Actions -->
+                <div class="col-12">
+                    <div class="row g-4 h-100">
+                        <!-- Project Status Summary -->
+                        <div class="col-12 col-md-6 d-flex">
+                            <div class="card w-100 p-4 d-flex flex-column justify-content-between">
+                                <h5 class="card-title fw-bold mb-3">Ringkasan Status Proyek</h5>
                                 
-                                <div class="profile-avatar-overlay d-flex align-items-center justify-content-center">
-                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white mb-1"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
-                                    <span class="text-white fw-semibold" style="font-size: 10px; letter-spacing: 0.5px; text-transform: uppercase;">Ubah Foto</span>
-                                </div>
-                            </div>
-                            
-                            <h6 class="fw-bold mt-3 mb-1 text-dark" style="font-size: 15px;"><?php echo htmlspecialchars($currentUser['nama']); ?></h6>
-                            <span class="badge bg-primary px-3 py-1 text-white" style="font-size: 9px; font-weight: 600; border-radius: 4px;"><?php echo strtoupper(htmlspecialchars($currentUser['role'])); ?></span>
-                        </form>
+                                <div class="d-flex flex-column gap-3 justify-content-center h-100">
+                                    <div>
+                                        <a href="../proyek/index.php?status=direncanakan" class="clickable-status-item" title="<?php echo $statusCounts['direncanakan']; ?> proyek dalam tahap perencanaan">
+                                            <div class="d-flex justify-content-between small mb-1">
+                                                <span class="fw-medium">Planning</span>
+                                                <span class="fw-bold text-muted"><?php echo $statusCounts['direncanakan']; ?></span>
+                                            </div>
+                                            <div class="progress" style="height: 8px;">
+                                                <div class="progress-bar bg-secondary" role="progressbar" style="width: <?php echo $percentages['direncanakan']; ?>%" aria-valuenow="<?php echo $percentages['direncanakan']; ?>" aria-valuemin="0" aria-valuemax="100"></div>
+                                            </div>
+                                        </a>
+                                    </div>
 
-                        <div class="small">
-                            <div class="d-flex justify-content-between py-2 border-bottom">
-                                <span class="text-muted">Username:</span>
-                                <span class="fw-bold text-dark"><?php echo htmlspecialchars($currentUser['username']); ?></span>
-                            </div>
-                            <div class="d-flex justify-content-between py-2 border-bottom">
-                                <span class="text-muted">Role Akses:</span>
-                                <span class="fw-bold text-dark text-uppercase"><?php echo htmlspecialchars($currentUser['role']); ?></span>
-                            </div>
-                            <div class="d-flex justify-content-between py-2">
-                                <span class="text-muted">Terakhir Masuk:</span>
-                                <span class="fw-bold text-dark">Hari Ini</span>
+                                    <div>
+                                        <a href="../proyek/index.php?status=berjalan" class="clickable-status-item" title="<?php echo $statusCounts['berjalan']; ?> proyek sedang berjalan">
+                                            <div class="d-flex justify-content-between small mb-1">
+                                                <span class="fw-medium">On Progress</span>
+                                                <span class="fw-bold text-primary"><?php echo $statusCounts['berjalan']; ?></span>
+                                            </div>
+                                            <div class="progress" style="height: 8px;">
+                                                <div class="progress-bar bg-primary" role="progressbar" style="width: <?php echo $percentages['berjalan']; ?>%" aria-valuenow="<?php echo $percentages['berjalan']; ?>" aria-valuemin="0" aria-valuemax="100"></div>
+                                            </div>
+                                        </a>
+                                    </div>
+
+                                    <div>
+                                        <a href="../proyek/index.php?status=selesai" class="clickable-status-item" title="<?php echo $statusCounts['selesai']; ?> proyek telah selesai">
+                                            <div class="d-flex justify-content-between small mb-1">
+                                                <span class="fw-medium">Completed</span>
+                                                <span class="fw-bold text-success"><?php echo $statusCounts['selesai']; ?></span>
+                                            </div>
+                                            <div class="progress" style="height: 8px;">
+                                                <div class="progress-bar bg-success" role="progressbar" style="width: <?php echo $percentages['selesai']; ?>%" aria-valuenow="<?php echo $percentages['selesai']; ?>" aria-valuemin="0" aria-valuemax="100"></div>
+                                            </div>
+                                        </a>
+                                    </div>
+
+                                    <div>
+                                        <a href="../proyek/index.php?status=tertunda" class="clickable-status-item" title="<?php echo $statusCounts['tertunda']; ?> proyek ditangguhkan">
+                                            <div class="d-flex justify-content-between small mb-1">
+                                                <span class="fw-medium">Suspended</span>
+                                                <span class="fw-bold text-danger"><?php echo $statusCounts['tertunda']; ?></span>
+                                            </div>
+                                            <div class="progress" style="height: 8px;">
+                                                <div class="progress-bar bg-danger" role="progressbar" style="width: <?php echo $percentages['tertunda']; ?>%" aria-valuenow="<?php echo $percentages['tertunda']; ?>" aria-valuemin="0" aria-valuemax="100"></div>
+                                            </div>
+                                        </a>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </div>
 
-                <!-- Quick Access Shortcut Widget -->
-                <div class="col-12 col-md-4">
-                    <div class="card h-100 p-4">
-                        <h5 class="card-title fw-bold mb-3">Aksi Cepat</h5>
-                        <div class="d-flex flex-column gap-3">
-                            <a href="../anggota/index.php" class="btn btn-light border-0 w-100 text-start py-3 px-3 shadow-sm d-flex align-items-center justify-content-between" style="border-radius: 10px; background: rgba(255, 255, 255, 0.4); border: 1px solid rgba(255,255,255,0.3); transition: all 0.2s ease;" onmouseover="this.style.background='rgba(99, 102, 241, 0.08)';" onmouseout="this.style.background='rgba(255, 255, 255, 0.4)';">
-                                <div class="d-flex align-items-center gap-2">
-                                    <span style="font-size: 18px;">👥</span>
-                                    <span class="fw-semibold small text-dark">Kelola Anggota</span>
+                        <!-- Quick Access Shortcut Widget -->
+                        <div class="col-12 col-md-6 d-flex">
+                            <div class="card w-100 p-4 d-flex flex-column justify-content-between">
+                                <h5 class="card-title fw-bold mb-3">Aksi Cepat</h5>
+                                <div class="d-flex flex-column gap-3 justify-content-center h-100">
+                                    <a href="../anggota/index.php" class="btn btn-light btn-quick-access w-100 text-start py-3 px-3 shadow-sm d-flex align-items-center justify-content-between">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span style="font-size: 18px;">👥</span>
+                                            <span class="fw-semibold small text-dark">Kelola Anggota</span>
+                                        </div>
+                                        <span class="text-muted small">→</span>
+                                    </a>
+                                    <a href="../proyek/index.php" class="btn btn-light btn-quick-access w-100 text-start py-3 px-3 shadow-sm d-flex align-items-center justify-content-between">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span style="font-size: 18px;">📂</span>
+                                            <span class="fw-semibold small text-dark">Kelola Proyek</span>
+                                        </div>
+                                        <span class="text-muted small">→</span>
+                                    </a>
                                 </div>
-                                <span class="text-muted small">→</span>
-                            </a>
-                            <a href="../proyek/index.php" class="btn btn-light border-0 w-100 text-start py-3 px-3 shadow-sm d-flex align-items-center justify-content-between" style="border-radius: 10px; background: rgba(255, 255, 255, 0.4); border: 1px solid rgba(255,255,255,0.3); transition: all 0.2s ease;" onmouseover="this.style.background='rgba(99, 102, 241, 0.08)';" onmouseout="this.style.background='rgba(255, 255, 255, 0.4)';">
-                                <div class="d-flex align-items-center gap-2">
-                                    <span style="font-size: 18px;">📂</span>
-                                    <span class="fw-semibold small text-dark">Kelola Proyek</span>
-                                </div>
-                                <span class="text-muted small">→</span>
-                            </a>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -525,16 +481,6 @@ $percentages = [
                     </div>
                 </div>
             </div>
-            <footer class="text-center text-muted small mt-5 pt-3 border-top">
-                Cloud Team Management v1.3 &copy; 2026 Kelompok 2
-            </footer>
-        </main>
-    </div>
-</div>
-
-<!-- Bootstrap 5 Bundle JS via CDN -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
 <!-- Counter Animation Script -->
 <script>
 document.addEventListener("DOMContentLoaded", () => {
@@ -572,5 +518,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 </script>
-</body>
-</html>
+
+<?php
+// Render Footer using layout helper
+renderFooter('../');
+?>

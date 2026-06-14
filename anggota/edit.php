@@ -202,67 +202,108 @@ renderHeader('Edit Anggota', 'anggota', '../');
 
 <div class="row g-4">
     <div class="col-12 col-lg-8">
-        <div class="card border-0 shadow-sm p-4 h-100">
+        <div class="card p-4 h-100">
             <form method="POST" action="edit.php?id=<?php echo $id; ?>" enctype="multipart/form-data" class="needs-validation">
                 
-                <!-- Nama -->
-                <div class="mb-4">
-                    <label for="nama" class="form-label fw-semibold text-dark">Nama Lengkap <span class="text-danger">*</span></label>
-                    <input type="text" name="nama" id="nama" class="form-control <?php echo isset($errors['nama']) ? 'is-invalid' : ''; ?>" placeholder="Masukkan nama lengkap" value="<?php echo htmlspecialchars($nama); ?>" required>
-                    <?php if (isset($errors['nama'])): ?>
-                        <div class="invalid-feedback"><?php echo $errors['nama']; ?></div>
-                    <?php endif; ?>
-                </div>
-
-                <!-- NIM -->
-                <div class="mb-4">
-                    <label for="nim" class="form-label fw-semibold text-dark">NIM <span class="text-danger">*</span></label>
-                    <input type="text" name="nim" id="nim" class="form-control <?php echo isset($errors['nim']) ? 'is-invalid' : ''; ?>" placeholder="Masukkan NIM" value="<?php echo htmlspecialchars($nim); ?>" required>
-                    <?php if (isset($errors['nim'])): ?>
-                        <div class="invalid-feedback"><?php echo $errors['nim']; ?></div>
-                    <?php endif; ?>
-                </div>
-
-                <!-- Email -->
-                <div class="mb-4">
-                    <label for="email" class="form-label fw-semibold text-dark">Alamat Email <span class="text-danger">*</span></label>
-                    <input type="email" name="email" id="email" class="form-control <?php echo isset($errors['email']) ? 'is-invalid' : ''; ?>" placeholder="Masukkan alamat email" value="<?php echo htmlspecialchars($email); ?>" required>
-                    <?php if (isset($errors['email'])): ?>
-                        <div class="invalid-feedback"><?php echo $errors['email']; ?></div>
-                    <?php endif; ?>
-                </div>
-
-                <!-- Foto Profil -->
-                <div class="mb-4">
-                    <label for="foto" class="form-label fw-semibold text-dark d-block">Foto Profil</label>
-                    <div class="d-flex align-items-center gap-3 mb-3">
-                        <?php 
-                        $avatarPath = '../uploads/' . $member['foto'];
-                        if (!empty($member['foto']) && file_exists(dirname(__DIR__) . '/uploads/' . $member['foto'])): 
-                        ?>
-                            <img src="<?php echo htmlspecialchars($avatarPath); ?>" alt="Avatar" class="avatar-mini rounded" style="width: 60px; height: 60px;">
-                        <?php else: ?>
-                            <div class="avatar-mini text-uppercase fw-bold rounded" style="width: 60px; height: 60px; font-size: 22px; background-color: var(--primary-color); color: #ffffff;">
-                                <?php echo htmlspecialchars(substr($member['nama'], 0, 1)); ?>
+                <!-- Foto Profil (Centered at the top) -->
+                <div class="mb-5">
+                    <div class="d-flex flex-column align-items-center">
+                        <input type="file" name="foto" id="foto-input" accept="image/png, image/jpeg, image/jpg" style="display:none;">
+                        
+                        <div class="profile-avatar-container cursor-pointer" onclick="document.getElementById('foto-input').click();" title="Klik untuk mengubah foto profil" id="avatar-preview-container">
+                            <div class="profile-avatar-inner">
+                                <?php 
+                                $avatarPath = '../uploads/' . $member['foto'];
+                                if (!empty($member['foto']) && file_exists(dirname(__DIR__) . '/uploads/' . $member['foto'])): 
+                                ?>
+                                    <img src="<?php echo htmlspecialchars($avatarPath); ?>" alt="Avatar" class="profile-avatar-img" id="avatar-preview-img">
+                                <?php else: ?>
+                                    <div class="profile-avatar-placeholder text-uppercase fw-bold" id="avatar-preview-placeholder">
+                                        <?php echo htmlspecialchars(substr($member['nama'], 0, 1)); ?>
+                                    </div>
+                                <?php endif; ?>
+                                
+                                <div class="profile-avatar-overlay">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-white"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                                    <span class="text-white fw-bold" style="font-size: 9px; letter-spacing: 0.8px; text-transform: uppercase;">Ubah Foto</span>
+                                </div>
                             </div>
-                        <?php endif; ?>
-                        <div>
-                            <span class="text-muted small">Akan digantikan bila mengunggah foto baru.</span>
                         </div>
+                        
+                        <span class="text-muted small mt-2 fw-semibold">Foto Profil</span>
+                        <span class="text-muted text-center" style="font-size: 11px;">Format: JPG, JPEG, PNG (Maks 2MB)</span>
+                        <?php if (isset($errors['foto'])): ?>
+                            <div class="text-danger small mt-1"><?php echo $errors['foto']; ?></div>
+                        <?php endif; ?>
                     </div>
-                    <input type="file" name="foto" id="foto" class="form-control <?php echo isset($errors['foto']) ? 'is-invalid' : ''; ?>" accept=".jpg,.jpeg,.png">
-                    <?php if (isset($errors['foto'])): ?>
-                        <div class="invalid-feedback"><?php echo $errors['foto']; ?></div>
-                    <?php else: ?>
-                        <div class="form-text text-muted small">Format file: JPG, JPEG, PNG. Maksimal 2 MB. Kosongkan jika tidak ingin mengubah.</div>
-                    <?php endif; ?>
+                </div>
+
+                <!-- Text inputs in a clean desktop grid -->
+                <div class="row g-4">
+                    <!-- Nama Lengkap -->
+                    <div class="col-md-6">
+                        <label for="nama" class="form-label fw-semibold text-dark">Nama Lengkap <span class="text-danger">*</span></label>
+                        <input type="text" name="nama" id="nama" class="form-control <?php echo isset($errors['nama']) ? 'is-invalid' : ''; ?>" placeholder="Masukkan nama lengkap" value="<?php echo htmlspecialchars($nama); ?>" required>
+                        <?php if (isset($errors['nama'])): ?>
+                            <div class="invalid-feedback"><?php echo $errors['nama']; ?></div>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- NIM -->
+                    <div class="col-md-6">
+                        <label for="nim" class="form-label fw-semibold text-dark">NIM <span class="text-danger">*</span></label>
+                        <input type="text" name="nim" id="nim" class="form-control <?php echo isset($errors['nim']) ? 'is-invalid' : ''; ?>" placeholder="Masukkan NIM" value="<?php echo htmlspecialchars($nim); ?>" required>
+                        <?php if (isset($errors['nim'])): ?>
+                            <div class="invalid-feedback"><?php echo $errors['nim']; ?></div>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- Alamat Email -->
+                    <div class="col-12">
+                        <label for="email" class="form-label fw-semibold text-dark">Alamat Email <span class="text-danger">*</span></label>
+                        <input type="email" name="email" id="email" class="form-control <?php echo isset($errors['email']) ? 'is-invalid' : ''; ?>" placeholder="Masukkan alamat email" value="<?php echo htmlspecialchars($email); ?>" required>
+                        <?php if (isset($errors['email'])): ?>
+                            <div class="invalid-feedback"><?php echo $errors['email']; ?></div>
+                        <?php endif; ?>
+                    </div>
                 </div>
 
                 <!-- Submit buttons -->
-                <div class="pt-2 d-flex gap-2">
+                <div class="pt-4 mt-2 d-flex gap-2">
                     <button type="submit" class="btn btn-primary px-4 py-2 border-0" style="background-color: var(--primary-color);">Simpan Perubahan</button>
                     <a href="index.php" class="btn btn-light border px-4 py-2">Batal</a>
                 </div>
+
+                <!-- Live Client-side Avatar Preview Script -->
+                <script>
+                document.getElementById('foto-input').addEventListener('change', function(event) {
+                    const file = event.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            let img = document.getElementById('avatar-preview-img');
+                            const placeholder = document.getElementById('avatar-preview-placeholder');
+                            
+                            if (!img) {
+                                img = document.createElement('img');
+                                img.id = 'avatar-preview-img';
+                                img.className = 'profile-avatar-img';
+                                img.alt = 'Avatar';
+                                const inner = document.querySelector('#avatar-preview-container .profile-avatar-inner');
+                                inner.insertBefore(img, inner.querySelector('.profile-avatar-overlay'));
+                            }
+                            
+                            img.src = e.target.result;
+                            img.style.display = 'block';
+                            
+                            if (placeholder) {
+                                placeholder.style.display = 'none';
+                            }
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+                </script>
             </form>
         </div>
     </div>

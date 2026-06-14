@@ -292,19 +292,27 @@ body {
 
 /* Minimalist Profile Interactive Avatar */
 .profile-avatar-container {
-    width: 130px;
-    height: 130px;
+    width: 135px;
+    height: 135px;
     border-radius: 50%;
-    overflow: hidden;
-    border: 4px solid rgba(99, 102, 241, 0.15);
-    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.12);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
+    cursor: pointer;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    background: #ffffff;
+    padding: 5px; /* Creates the white ring gap */
+    box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.08), 0 10px 25px -5px rgba(99, 102, 241, 0.12);
 }
 .profile-avatar-container:hover {
-    border-color: var(--primary-color);
-    box-shadow: 0 8px 30px rgba(99, 102, 241, 0.25);
-    transform: scale(1.05);
+    transform: translateY(-4px) scale(1.03);
+    box-shadow: 0 0 0 3px var(--primary-color), 0 20px 30px -10px rgba(99, 102, 241, 0.28);
+}
+.profile-avatar-inner {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    overflow: hidden;
+    position: relative;
+    background: #f1f5f9;
 }
 .profile-avatar-img {
     width: 100%;
@@ -319,7 +327,8 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 48px;
+    font-size: 52px;
+    font-weight: 700;
 }
 .profile-avatar-overlay {
     position: absolute;
@@ -327,15 +336,20 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(15, 23, 42, 0.65);
+    background-color: rgba(99, 102, 241, 0.85);
     opacity: 0;
-    transition: opacity 0.25s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     border-radius: 50%;
+    display: flex !important;
     flex-direction: column;
+    align-items: center;
+    justify-content: center;
     gap: 4px;
+    transform: scale(0.9);
 }
 .profile-avatar-container:hover .profile-avatar-overlay {
     opacity: 1;
+    transform: scale(1);
 }
 .cursor-pointer {
     cursor: pointer;
@@ -385,3 +399,34 @@ body {
     color: var(--text-muted);
     margin: 0;
 }
+
+/* Quick Access Cards */
+.btn-quick-access {
+    border-radius: 10px !important;
+    background: rgba(255, 255, 255, 0.4) !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    transition: all 0.2s ease !important;
+}
+
+.btn-quick-access:hover {
+    background: rgba(99, 102, 241, 0.08) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.08);
+}
+
+/* Navbar Profile Link Hover Effects */
+.nav-profile-link {
+    transition: opacity 0.2s ease;
+}
+.nav-profile-link:hover {
+    opacity: 0.85;
+}
+.nav-profile-link .avatar-mini {
+    transition: all 0.2s ease;
+}
+.nav-profile-link:hover .avatar-mini {
+    border-color: var(--primary-color) !important;
+    transform: scale(1.05);
+    box-shadow: 0 4px 10px rgba(99, 102, 241, 0.15);
+}
+
