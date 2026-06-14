@@ -26,7 +26,13 @@ function isLoggedIn() {
  */
 function requireLogin() {
     if (!isLoggedIn()) {
-        header("Location: login.php");
+        if (file_exists('auth/login.php')) {
+            header("Location: auth/login.php");
+        } elseif (file_exists('../auth/login.php')) {
+            header("Location: ../auth/login.php");
+        } else {
+            header("Location: ../../auth/login.php");
+        }
         exit;
     }
 }
@@ -44,7 +50,13 @@ function requireRole($allowedRoles) {
     
     $userRole = $_SESSION['role'] ?? '';
     if (!in_array($userRole, $allowedRoles)) {
-        header("Location: dashboard.php?error=unauthorized");
+        if (file_exists('dashboard/index.php')) {
+            header("Location: dashboard/index.php?error=unauthorized");
+        } elseif (file_exists('../dashboard/index.php')) {
+            header("Location: ../dashboard/index.php?error=unauthorized");
+        } else {
+            header("Location: ../../dashboard/index.php?error=unauthorized");
+        }
         exit;
     }
 }

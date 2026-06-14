@@ -3,12 +3,12 @@
  * Cloud Team Management - Registration Page
  */
 
-require_once __DIR__ . '/config/database.php';
-require_once __DIR__ . '/config/auth.php';
+require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config/auth.php';
 
 // Redirect to dashboard if already logged in
 if (isLoggedIn()) {
-    header("Location: dashboard.php");
+    header("Location: ../dashboard/index.php");
     exit;
 }
 
@@ -20,6 +20,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
     $role = $_POST['role'] ?? 'member';
+
+    // Restrict role to allowed database roles ('admin', 'member')
+    if ($role !== 'admin' && $role !== 'member') {
+        $role = 'member';
+    }
 
     if (empty($username) || empty($email) || empty($password)) {
         $errorMsg = 'Semua field wajib diisi.';
@@ -264,8 +269,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="logo-section">
             <div class="logo-icon">C</div>
             <h1 class="logo-title">Daftar Akun Baru</h1>
-            <p class="logo-subtitle">Buat akun untuk masuk ke dashboard </p>
-            <p class="logo-subtitle">Cloud Team Management</p>
+            <p class="logo-subtitle">Buat akun untuk masuk ke dashboard CTM</p>
         </div>
 
         <?php if (!empty($errorMsg)): ?>
@@ -309,7 +313,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <label for="role" class="form-label">Peran (Role)</label>
                 <select id="role" name="role" class="form-select">
                     <option value="member">Member</option>
-                    <option value="manager">Manager</option>
                     <option value="admin">Admin</option>
                 </select>
             </div>

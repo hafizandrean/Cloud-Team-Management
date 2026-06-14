@@ -7,8 +7,8 @@
 require_once __DIR__ . '/config/auth.php';
 
 if (isLoggedIn()) {
-    header("Location: dashboard.php");
+    header("Location: dashboard/index.php");
 } else {
-    header("Location: login.php");
+    header("Location: auth/login.php");
 }
 exit;
