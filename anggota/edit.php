@@ -16,9 +16,16 @@ if ($id <= 0) {
     exit;
 }
 
-// Fetch member data
+// Fetch member data with linked username
 try {
-    $stmt = $db->prepare("SELECT * FROM anggota WHERE id = ?");
+    $stmt = $db->prepare("
+        SELECT 
+            a.*,
+            u.username
+        FROM anggota a
+        LEFT JOIN users u ON a.id_user = u.id
+        WHERE a.id = ?
+    ");
     $stmt->execute([$id]);
     $member = $stmt->fetch();
     
@@ -37,6 +44,7 @@ try {
 $nama = $member['nama'];
 $nim = $member['nim'];
 $email = $member['email'];
+$username = $member['username'] ?? '';
 $errors = [];
 
 // Handle form submission
@@ -44,6 +52,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nama = trim($_POST['nama'] ?? '');
     $nim = trim($_POST['nim'] ?? '');
     $email = trim($_POST['email'] ?? '');
+    $username = trim($_POST['username'] ?? '');
+    $idUser = null;
     
     // 1. Validation Name
     if (empty($nama)) {
@@ -80,7 +90,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // 4. Validation & Upload Foto
+    // 4. Validation Username Akun Login
+    if (!empty($username)) {
+        $stmt = $db->prepare("SELECT id, username FROM users WHERE username = ?");
+        $stmt->execute([$username]);
+        $user = $stmt->fetch();
+
+        if (!$user) {
+            $errors['username'] = 'Username akun login tidak ditemukan. Silakan buat akun terlebih dahulu melalui halaman register.';
+        } else {
+            $idUser = (int)$user['id'];
+
+            // Check if user already linked to another member
+            $stmt = $db->prepare("SELECT COUNT(*) FROM anggota WHERE id_user = ? AND id != ?");
+            $stmt->execute([$idUser, $id]);
+            if ($stmt->fetchColumn() > 0) {
+                $errors['username'] = 'Username ini sudah terhubung dengan anggota lain.';
+            }
+        }
+    }
+
+    // 5. Validation & Upload Foto
     $newFotoFilename = null;
     $hasNewFoto = false;
     
@@ -98,9 +128,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $errors['foto'] = 'Terjadi kesalahan saat mengunggah foto.';
         } elseif (!in_array($fileExt, $allowedExtensions)) {
             $errors['foto'] = 'Format foto tidak valid. Gunakan format JPG, JPEG, atau PNG.';
-        } elseif ($fileSize > 2 * 1024 * 1024) { // 2MB
+        } elseif ($fileSize > 2 * 1024 * 1024) {
             $errors['foto'] = 'Ukuran foto maksimal adalah 2 MB.';
         } else {
+            // Ensure upload folder exists
+            $uploadDir = __DIR__ . '/../uploads/anggota/';
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0777, true);
+            }
+
             // Generate unique filename
             $newFotoFilename = 'anggota/' . uniqid() . '.' . $fileExt;
             $uploadTarget = __DIR__ . '/../uploads/' . $newFotoFilename;
@@ -127,30 +163,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
                 
-                // DB Update query (with new photo)
-                $query = "UPDATE anggota SET nama = :nama, nim = :nim, email = :email, foto = :foto, updated_at = NOW() WHERE id = :id";
+                // DB Update query with new photo and id_user
+                $query = "
+                    UPDATE anggota 
+                    SET nama = :nama, 
+                        nim = :nim, 
+                        email = :email, 
+                        foto = :foto,
+                        id_user = :id_user,
+                        updated_at = NOW() 
+                    WHERE id = :id
+                ";
                 $stmt = $db->prepare($query);
                 $stmt->execute([
                     ':nama' => $nama,
                     ':nim' => $nim,
                     ':email' => $email,
                     ':foto' => $newFotoFilename,
+                    ':id_user' => $idUser,
                     ':id' => $id
                 ]);
             } else {
-                // DB Update query (keep existing photo)
-                $query = "UPDATE anggota SET nama = :nama, nim = :nim, email = :email, updated_at = NOW() WHERE id = :id";
+                // DB Update query keep existing photo, update id_user
+                $query = "
+                    UPDATE anggota 
+                    SET nama = :nama, 
+                        nim = :nim, 
+                        email = :email,
+                        id_user = :id_user,
+                        updated_at = NOW() 
+                    WHERE id = :id
+                ";
                 $stmt = $db->prepare($query);
                 $stmt->execute([
                     ':nama' => $nama,
                     ':nim' => $nim,
                     ':email' => $email,
+                    ':id_user' => $idUser,
                     ':id' => $id
                 ]);
             }
 
-            // Sync session variables if editing own profile
-            if (isset($_SESSION['user_id']) && !empty($member['id_user']) && (int)$member['id_user'] === (int)$_SESSION['user_id']) {
+            // Sync session variables if editing own profile or connecting to current user
+            if (
+                isset($_SESSION['user_id']) && 
+                (
+                    (!empty($member['id_user']) && (int)$member['id_user'] === (int)$_SESSION['user_id']) ||
+                    (!empty($idUser) && (int)$idUser === (int)$_SESSION['user_id'])
+                )
+            ) {
                 $_SESSION['nama'] = $nama;
                 $_SESSION['email'] = $email;
                 if ($hasNewFoto) {
@@ -166,6 +227,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         } catch (Exception $e) {
             $errors['global'] = 'Gagal memperbarui data: ' . $e->getMessage();
+
             // Clean uploaded photo if DB query fails
             if ($hasNewFoto && file_exists(__DIR__ . '/../uploads/' . $newFotoFilename)) {
                 unlink(__DIR__ . '/../uploads/' . $newFotoFilename);
@@ -205,7 +267,7 @@ renderHeader('Edit Anggota', 'anggota', '../');
         <div class="card p-4 h-100">
             <form method="POST" action="edit.php?id=<?php echo $id; ?>" enctype="multipart/form-data" class="needs-validation">
                 
-                <!-- Foto Profil (Centered at the top) -->
+                <!-- Foto Profil -->
                 <div class="mb-5">
                     <div class="d-flex flex-column align-items-center">
                         <input type="file" name="foto" id="foto-input" accept="image/png, image/jpeg, image/jpg" style="display:none;">
@@ -238,7 +300,7 @@ renderHeader('Edit Anggota', 'anggota', '../');
                     </div>
                 </div>
 
-                <!-- Text inputs in a clean desktop grid -->
+                <!-- Text inputs -->
                 <div class="row g-4">
                     <!-- Nama Lengkap -->
                     <div class="col-md-6">
@@ -264,6 +326,19 @@ renderHeader('Edit Anggota', 'anggota', '../');
                         <input type="email" name="email" id="email" class="form-control <?php echo isset($errors['email']) ? 'is-invalid' : ''; ?>" placeholder="Masukkan alamat email" value="<?php echo htmlspecialchars($email); ?>" required>
                         <?php if (isset($errors['email'])): ?>
                             <div class="invalid-feedback"><?php echo $errors['email']; ?></div>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- Username Akun Login -->
+                    <div class="col-12">
+                        <label for="username" class="form-label fw-semibold text-dark">Username Akun Login</label>
+                        <input type="text" name="username" id="username" class="form-control <?php echo isset($errors['username']) ? 'is-invalid' : ''; ?>" placeholder="Contoh: ellena, hafiz, rizqi" value="<?php echo htmlspecialchars($username); ?>">
+                        <?php if (isset($errors['username'])): ?>
+                            <div class="invalid-feedback"><?php echo $errors['username']; ?></div>
+                        <?php else: ?>
+                            <div class="form-text text-muted small">
+                                Opsional. Isi username untuk menghubungkan anggota ini dengan akun login. Kosongkan jika ingin melepas hubungan akun.
+                            </div>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -315,15 +390,19 @@ renderHeader('Edit Anggota', 'anggota', '../');
             <ul class="text-muted small ps-0" style="list-style-type: none;">
                 <li class="mb-3 d-flex gap-2">
                     <span>💡</span>
-                    <span>Jika Anda mengganti foto profil dengan yang baru, foto profil lama otomatis dihapus dari sistem penyimpanan server.</span>
+                    <span>Jika mengganti foto profil dengan yang baru, foto profil lama otomatis dihapus dari sistem penyimpanan server.</span>
                 </li>
                 <li class="mb-3 d-flex gap-2">
                     <span>🔒</span>
-                    <span>NIM dan alamat email harus tetap unik di dalam sistem (tidak boleh bentrok dengan milik anggota lain).</span>
+                    <span>NIM dan alamat email harus tetap unik di dalam sistem.</span>
                 </li>
                 <li class="mb-3 d-flex gap-2">
                     <span>📌</span>
                     <span>Kolom dengan tanda bintang (<span class="text-danger">*</span>) harus diisi dengan benar.</span>
+                </li>
+                <li class="mb-3 d-flex gap-2">
+                    <span>🔗</span>
+                    <span>Username akun login digunakan untuk menghubungkan data anggota dengan akun user yang sudah terdaftar.</span>
                 </li>
             </ul>
         </div>

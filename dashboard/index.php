@@ -254,7 +254,7 @@ renderHeader('Dashboard', 'dashboard', '../');
                 <div class="col-12 col-sm-6 col-lg-3">
                     <a href="../activity-log/index.php" class="card-summary d-flex align-items-center justify-content-between text-decoration-none" title="Lihat Log Aktivitas User">
                         <div class="metric-info">
-                            <div class="card-summary-title text-muted">Total User</div>
+                            <div class="card-summary-title text-muted">Activity Log</div>
                             <div class="card-summary-value text-dark" id="val-users">0</div>
                         </div>
                         <div class="card-summary-icon users">👤</div>
@@ -385,7 +385,7 @@ renderHeader('Dashboard', 'dashboard', '../');
                 <!-- Recent Projects Table -->
                 <div class="col-12 col-xl-6">
                     <div class="card p-4 h-100">
-                        <h5 class="card-title fw-bold mb-3">5 Proyek Terbaru</h5>
+                        <h5 class="card-title fw-bold mb-3">Proyek Terbaru</h5>
                         <div class="table-responsive">
                             <table class="table table-hover table-custom mb-0">
                                 <thead>
@@ -433,7 +433,7 @@ renderHeader('Dashboard', 'dashboard', '../');
                 <!-- Recent Members Table -->
                 <div class="col-12 col-xl-6">
                     <div class="card p-4 h-100">
-                        <h5 class="card-title fw-bold mb-3">5 Anggota Terbaru</h5>
+                        <h5 class="card-title fw-bold mb-3">Anggota Terbaru</h5>
                         <div class="table-responsive">
                             <table class="table table-hover table-custom mb-0">
                                 <thead>
