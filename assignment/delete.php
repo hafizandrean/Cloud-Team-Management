@@ -6,6 +6,9 @@
 require_once __DIR__ . '/../config/layout.php';
 require_once __DIR__ . '/../config/activity_helper.php';
 
+// Protect page (Admin only)
+requireRole('admin');
+
 $db = Database::getConnection();
 
 // Get and validate Assignment ID

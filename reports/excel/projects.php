@@ -12,8 +12,8 @@ require_once __DIR__ . '/../helper.php';
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
-// Enforce login
-requireLogin();
+// Protect page (Admin only)
+requireRole('admin');
 $currentUser = getCurrentUser();
 
 $db = Database::getConnection();

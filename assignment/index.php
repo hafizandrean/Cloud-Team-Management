@@ -33,6 +33,19 @@ try {
     $whereClauses = [];
     $params = [];
 
+    // Filter assignments if the user is a Member
+    if (($_SESSION['role'] ?? '') !== 'admin') {
+        $anggotaId = $_SESSION['anggota_id'] ?? null;
+        if (!$anggotaId) {
+            $stmtAnggota = $db->prepare("SELECT id FROM anggota WHERE id_user = ?");
+            $stmtAnggota->execute([$_SESSION['user_id']]);
+            $anggotaId = $stmtAnggota->fetchColumn() ?: null;
+            $_SESSION['anggota_id'] = $anggotaId;
+        }
+        $whereClauses[] = "ap.anggota_id = :session_anggota_id";
+        $params[':session_anggota_id'] = $anggotaId ? (int)$anggotaId : 0;
+    }
+
     if (!empty($search)) {
         $whereClauses[] = "(a.nama LIKE :search1 OR p.nama_proyek LIKE :search2)";
         $params[':search1'] = "%$search%";
@@ -109,15 +122,21 @@ renderHeader('Kelola Assignment', 'assignment', '../');
 
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-4 border-bottom">
     <div>
-        <h1 class="h2 fw-bold welcome-title" id="page-title">Penugasan & Kolaborasi</h1>
-        <p class="welcome-subtitle text-muted">Kelola relasi kolaborasi antara anggota tim dengan proyek.</p>
+        <h1 class="h2 fw-bold welcome-title" id="page-title">
+            <?php echo (($_SESSION['role'] ?? '') === 'admin') ? 'Penugasan & Kolaborasi' : 'Tugas Saya'; ?>
+        </h1>
+        <p class="welcome-subtitle text-muted">
+            <?php echo (($_SESSION['role'] ?? '') === 'admin') ? 'Kelola relasi kolaborasi antara anggota tim dengan proyek.' : 'Daftar penugasan dan proyek yang Anda ikuti.'; ?>
+        </p>
     </div>
+    <?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
     <div class="btn-toolbar mb-2 mb-md-0">
         <a href="create.php" class="btn btn-primary d-flex align-items-center gap-2 py-2 px-3 shadow-sm border-0" style="background-color: var(--primary-color);">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
             <span>Tambah Assignment</span>
         </a>
     </div>
+    <?php endif; ?>
 </div>
 
 <!-- If no assignments exist at all in system, display a beautiful Empty State Card -->
@@ -135,6 +154,7 @@ renderHeader('Kelola Assignment', 'assignment', '../');
 <?php else: ?>
 
     <!-- Assignment Statistics Header -->
+    <?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
     <div class="row g-4 mb-4">
         <div class="col-6 col-lg-3">
             <div class="card p-3 border-0 shadow-sm d-flex flex-row align-items-center justify-content-between">
@@ -173,11 +193,12 @@ renderHeader('Kelola Assignment', 'assignment', '../');
             </div>
         </div>
     </div>
+    <?php endif; ?>
 
     <!-- Search, Filters, Table and Distribution Grid -->
     <div class="row g-4">
-        <!-- Main Table Area (Left Column) -->
-        <div class="col-12 col-xl-8">
+        <!-- Main Table Area -->
+        <div class="<?php echo (($_SESSION['role'] ?? '') === 'admin') ? 'col-12 col-xl-8' : 'col-12'; ?>">
             <!-- Search & Filters -->
             <div class="card border-0 shadow-sm p-4 mb-4">
                 <form method="GET" action="index.php" class="row g-3 align-items-center">
@@ -220,13 +241,15 @@ renderHeader('Kelola Assignment', 'assignment', '../');
                                 <th>Nama Proyek</th>
                                 <th>Tanggal Assignment</th>
                                 <th>Status Proyek</th>
+                                <?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
                                 <th style="width: 80px;" class="text-center">Aksi</th>
+                                <?php endif; ?>
                             </tr>
                         </thead>
                         <tbody>
                             <?php if (empty($assignments)): ?>
                                 <tr>
-                                    <td colspan="7" class="text-center text-muted py-4">
+                                    <td colspan="<?php echo (($_SESSION['role'] ?? '') === 'admin') ? 7 : 6; ?>" class="text-center text-muted py-4">
                                         Tidak ada data penugasan ditemukan.
                                     </td>
                                 </tr>
@@ -262,11 +285,13 @@ renderHeader('Kelola Assignment', 'assignment', '../');
                                         <td>
                                             <?php echo getProjectStatusBadge($a['status'], $a['deadline']); ?>
                                         </td>
+                                        <?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
                                         <td class="text-center">
                                             <a href="delete.php?id=<?php echo $a['id']; ?>" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center justify-content-center" style="width: 32px; height: 32px;" title="Hapus" onclick="return confirm('Apakah Anda yakin ingin menghapus penugasan <?php echo htmlspecialchars($a['nama']); ?> dari proyek <?php echo htmlspecialchars($a['nama_proyek']); ?>?');">
                                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                                             </a>
                                         </td>
+                                        <?php endif; ?>
                                     </tr>
                                 <?php endforeach; ?>
                             <?php endif; ?>
@@ -300,6 +325,7 @@ renderHeader('Kelola Assignment', 'assignment', '../');
         </div>
 
         <!-- Collaboration Widget (Right Column) -->
+        <?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
         <div class="col-12 col-xl-4">
             <div class="card border-0 shadow-sm p-4 h-100">
                 <h5 class="fw-bold text-dark mb-4">Distribusi Proyek (Collaboration)</h5>
@@ -327,6 +353,7 @@ renderHeader('Kelola Assignment', 'assignment', '../');
                 <?php endif; ?>
             </div>
         </div>
+        <?php endif; ?>
     </div>
 <?php endif; ?>
 

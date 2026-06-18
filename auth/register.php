@@ -17,17 +17,16 @@ $successMsg = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username'] ?? '');
+    $nama = trim($_POST['nama'] ?? '');
+    $nim = trim($_POST['nim'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
-    $role = $_POST['role'] ?? 'member';
+    $role = 'member';
 
-    // Restrict role to allowed database roles ('admin', 'member')
-    if ($role !== 'admin' && $role !== 'member') {
-        $role = 'member';
-    }
-
-    if (empty($username) || empty($email) || empty($password)) {
+    if (empty($username) || empty($nama) || empty($nim) || empty($email) || empty($password)) {
         $errorMsg = 'Semua field wajib diisi.';
+    } elseif (!is_numeric($nim)) {
+        $errorMsg = 'NIM harus berupa angka saja.';
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $errorMsg = 'Format email tidak valid.';
     } else {
@@ -40,29 +39,69 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($stmt->fetch()) {
                 $errorMsg = 'Username sudah terdaftar.';
             } else {
-                // Check if email already exists
+                // Check if email already exists in users
                 $stmt = $db->prepare("SELECT id FROM users WHERE email = :email");
                 $stmt->execute(['email' => $email]);
                 if ($stmt->fetch()) {
-                    $errorMsg = 'Email sudah terdaftar.';
+                    $errorMsg = 'Email sudah terdaftar pada pengguna lain.';
                 } else {
-                    // Hash password and insert
-                    $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-                    $stmt = $db->prepare("
-                        INSERT INTO users (username, email, password, role) 
-                        VALUES (:username, :email, :password, :role)
-                    ");
-                    $stmt->execute([
-                        'username' => $username,
-                        'email' => $email,
-                        'password' => $hashedPassword,
-                        'role' => $role
-                    ]);
+                    // Check if email already exists in anggota
+                    $stmt = $db->prepare("SELECT id FROM anggota WHERE email = :email");
+                    $stmt->execute(['email' => $email]);
+                    if ($stmt->fetch()) {
+                        $errorMsg = 'Email sudah terdaftar pada anggota lain.';
+                    } else {
+                        // Check if NIM already exists in anggota
+                        $stmt = $db->prepare("SELECT id FROM anggota WHERE nim = :nim");
+                        $stmt->execute(['nim' => $nim]);
+                        if ($stmt->fetch()) {
+                            $errorMsg = 'NIM sudah terdaftar.';
+                        } else {
+                            // Start transaction
+                            $db->beginTransaction();
 
-                    $successMsg = 'Akun berhasil dibuat! Silakan masuk.';
+                            // Hash password and insert user
+                            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+                            $stmt = $db->prepare("
+                                INSERT INTO users (username, email, password, role) 
+                                VALUES (:username, :email, :password, :role)
+                            ");
+                            $stmt->execute([
+                                'username' => $username,
+                                'email' => $email,
+                                'password' => $hashedPassword,
+                                'role' => $role
+                            ]);
+                            $newUserId = $db->lastInsertId();
+
+                            // Insert matching anggota profile
+                            $stmt = $db->prepare("
+                                INSERT INTO anggota (nama, nim, email, id_user, jabatan, created_at, updated_at) 
+                                VALUES (:nama, :nim, :email, :id_user, 'Developer', NOW(), NOW())
+                            ");
+                            $stmt->execute([
+                                'nama' => $nama,
+                                'nim' => $nim,
+                                'email' => $email,
+                                'id_user' => $newUserId
+                            ]);
+
+                            $db->commit();
+                            $successMsg = 'Akun berhasil dibuat! Silakan masuk.';
+                            
+                            // Reset input fields
+                            $username = '';
+                            $nama = '';
+                            $nim = '';
+                            $email = '';
+                        }
+                    }
                 }
             }
         } catch (PDOException $e) {
+            if (isset($db) && $db->inTransaction()) {
+                $db->rollBack();
+            }
             $errorMsg = 'Terjadi kesalahan sistem: ' . $e->getMessage();
         }
     }
@@ -313,6 +352,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
 
             <div class="form-group">
+                <label for="nama" class="form-label">Nama Lengkap</label>
+                <input type="text" id="nama" name="nama" class="form-input" placeholder="Masukkan nama lengkap Anda" required value="<?php echo htmlspecialchars($nama ?? ''); ?>">
+            </div>
+
+            <div class="form-group">
+                <label for="nim" class="form-label">NIM</label>
+                <input type="text" id="nim" name="nim" class="form-input" placeholder="Masukkan NIM (angka saja)" required value="<?php echo htmlspecialchars($nim ?? ''); ?>">
+            </div>
+
+            <div class="form-group">
                 <label for="email" class="form-label">Email</label>
                 <input type="email" id="email" name="email" class="form-input" placeholder="Masukkan alamat email" required autocomplete="email" value="<?php echo htmlspecialchars($email ?? ''); ?>">
             </div>
@@ -320,14 +369,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="form-group">
                 <label for="password" class="form-label">Password</label>
                 <input type="password" id="password" name="password" class="form-input" placeholder="Buat password minimalis" required autocomplete="new-password">
-            </div>
-
-            <div class="form-group">
-                <label for="role" class="form-label">Peran (Role)</label>
-                <select id="role" name="role" class="form-select">
-                    <option value="member">Member</option>
-                    <option value="admin">Admin</option>
-                </select>
             </div>
 
             <button type="submit" class="btn-submit">Daftar</button>

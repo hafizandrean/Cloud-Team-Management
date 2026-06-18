@@ -20,19 +20,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'] ?? '';
 
     if (empty($username) || empty($password)) {
-        $errorMsg = 'Username dan password wajib diisi.';
+        $errorMsg = 'Username atau email dan password wajib diisi.';
     } else {
         try {
             $db = Database::getConnection();
             
-            // Query user and join with anggota to get name and photo if exists
+            // Query user and join with anggota to get name, photo, and anggota_id if exists (checking username OR email)
             $stmt = $db->prepare("
-                SELECT u.*, a.nama, a.foto, a.email AS anggota_email 
+                SELECT u.*, a.nama, a.foto, a.email AS anggota_email, a.id AS anggota_id 
                 FROM users u
                 LEFT JOIN anggota a ON u.id = a.id_user
-                WHERE u.username = :username
+                WHERE u.username = :login_input1 OR u.email = :login_input2
             ");
-            $stmt->execute(['username' => $username]);
+            $stmt->execute([
+                'login_input1' => $username,
+                'login_input2' => $username
+            ]);
             $user = $stmt->fetch();
 
             if ($user && password_verify($password, $user['password'])) {
@@ -44,6 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['nama'] = $user['nama'] ?? $user['username'];
                 $_SESSION['foto'] = $user['foto'];
                 $_SESSION['email'] = $user['anggota_email'] ?? $user['email'];
+                $_SESSION['anggota_id'] = $user['anggota_id'] ?? null;
 
                 // Write activity log
                 writeLog($db, $user['id'], 'LOGIN', 'User berhasil login');
@@ -286,8 +290,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <form action="login.php" method="POST" id="login-form">
             <div class="form-group">
-                <label for="username" class="form-label">Username</label>
-                <input type="text" id="username" name="username" class="form-input" placeholder="Masukkan username Anda" required autocomplete="username" value="<?php echo htmlspecialchars($username ?? ''); ?>">
+                <label for="username" class="form-label">Username atau Email</label>
+                <input type="text" id="username" name="username" class="form-input" placeholder="Masukkan username atau email Anda" required autocomplete="username" value="<?php echo htmlspecialchars($username ?? ''); ?>">
             </div>
 
             <div class="form-group">

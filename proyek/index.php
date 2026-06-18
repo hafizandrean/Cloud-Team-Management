@@ -31,6 +31,19 @@ try {
     $whereClauses = [];
     $params = [];
 
+    // If not admin, only show projects they are assigned to
+    if (($_SESSION['role'] ?? '') !== 'admin') {
+        $anggotaId = $_SESSION['anggota_id'] ?? null;
+        if (!$anggotaId) {
+            $stmtAnggota = $db->prepare("SELECT id FROM anggota WHERE id_user = ?");
+            $stmtAnggota->execute([$_SESSION['user_id']]);
+            $anggotaId = $stmtAnggota->fetchColumn() ?: null;
+            $_SESSION['anggota_id'] = $anggotaId;
+        }
+        $whereClauses[] = "p.id IN (SELECT proyek_id FROM anggota_proyek WHERE anggota_id = :session_anggota_id)";
+        $params[':session_anggota_id'] = $anggotaId ? (int)$anggotaId : 0;
+    }
+
     if (!empty($search)) {
         $whereClauses[] = "p.nama_proyek LIKE :search";
         $params[':search'] = "%$search%";
@@ -102,14 +115,17 @@ renderHeader('Kelola Proyek', 'proyek', '../');
         <h1 class="h2 fw-bold welcome-title" id="page-title">Kelola Proyek</h1>
         <p class="welcome-subtitle text-muted">Kelola daur hidup proyek dan penugasan tim di lingkungan CTM.</p>
     </div>
+    <?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
     <div class="btn-toolbar mb-2 mb-md-0">
         <a href="create.php" class="btn btn-primary d-flex align-items-center gap-2 py-2 px-3 shadow-sm border-0" style="background-color: var(--primary-color);">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
             <span>Tambah Proyek</span>
         </a>
     </div>
+    <?php endif; ?>
 </div>
 
+<?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
 <!-- Project Summary Mini-Cards -->
 <div class="row g-4 mb-4">
     <!-- Total Proyek -->
@@ -153,6 +169,7 @@ renderHeader('Kelola Proyek', 'proyek', '../');
         </div>
     </div>
 </div>
+<?php endif; ?>
 
 <!-- Search & Filters -->
 <div class="card border-0 shadow-sm p-4 mb-4">
@@ -229,12 +246,14 @@ renderHeader('Kelola Proyek', 'proyek', '../');
                                     <a href="detail.php?id=<?php echo $p['id']; ?>" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center justify-content-center" style="width: 32px; height: 32px;" title="Detail">
                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                                     </a>
+                                    <?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
                                     <a href="edit.php?id=<?php echo $p['id']; ?>" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center justify-content-center" style="width: 32px; height: 32px;" title="Edit">
                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                     </a>
                                     <a href="delete.php?id=<?php echo $p['id']; ?>" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center justify-content-center" style="width: 32px; height: 32px;" title="Hapus" onclick="return confirm('Apakah Anda yakin ingin menghapus proyek <?php echo htmlspecialchars($p['nama_proyek']); ?>?');">
                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                                     </a>
+                                    <?php endif; ?>
                                 </div>
                             </td>
                         </tr>

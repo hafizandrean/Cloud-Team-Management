@@ -6,6 +6,9 @@
 require_once __DIR__ . '/../config/layout.php';
 require_once __DIR__ . '/helper.php';
 
+// Protect page (Admin only)
+requireRole('admin');
+
 $db = Database::getConnection();
 
 // Fetch summary metrics
@@ -40,9 +43,9 @@ renderHeader('Report Center', 'reports', '../');
         <div class="my-5">
             <span style="font-size: 56px;">📝</span>
             <h4 class="fw-bold mt-3 text-dark">Belum Ada Data Untuk Dilaporkan</h4>
-            <p class="text-muted">Silakan tambahkan anggota, proyek, atau assignment terlebih dahulu sebelum mengunduh laporan.</p>
+            <p class="text-muted">Silakan daftarkan anggota baru melalui halaman registrasi, tambahkan proyek, atau assignment terlebih dahulu sebelum mengunduh laporan.</p>
             <div class="mt-4 gap-2 d-flex justify-content-center">
-                <a href="../anggota/create.php" class="btn btn-primary px-4 py-2">Tambah Anggota</a>
+                <a href="../anggota/index.php" class="btn btn-primary px-4 py-2">Kelola Anggota</a>
                 <a href="../proyek/create.php" class="btn btn-outline-primary px-4 py-2">Tambah Proyek</a>
             </div>
         </div>

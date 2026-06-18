@@ -16,9 +16,14 @@ if ($id <= 0) {
     exit;
 }
 
-// Fetch member data
+// Fetch member data with user system role
 try {
-    $stmt = $db->prepare("SELECT * FROM anggota WHERE id = ?");
+    $stmt = $db->prepare("
+        SELECT a.*, u.role AS system_role 
+        FROM anggota a 
+        LEFT JOIN users u ON a.id_user = u.id 
+        WHERE a.id = ?
+    ");
     $stmt->execute([$id]);
     $member = $stmt->fetch();
     
@@ -33,10 +38,31 @@ try {
     exit;
 }
 
+// Check authorization: Admin can edit any member, Member can only edit themselves
+$userRole = $_SESSION['role'] ?? 'member';
+$sessionAnggotaId = $_SESSION['anggota_id'] ?? null;
+
+if ($userRole !== 'admin') {
+    if (!$sessionAnggotaId) {
+        $stmtSession = $db->prepare("SELECT id FROM anggota WHERE id_user = ?");
+        $stmtSession->execute([$_SESSION['user_id']]);
+        $sessionAnggotaId = $stmtSession->fetchColumn() ?: null;
+        $_SESSION['anggota_id'] = $sessionAnggotaId;
+    }
+    
+    if ((int)$id !== (int)$sessionAnggotaId) {
+        $_SESSION['flash_error'] = 'Akses ditolak. Anda hanya dapat mengubah profil Anda sendiri.';
+        header('Location: index.php');
+        exit;
+    }
+}
+
 // Variables for form values
 $nama = $member['nama'];
 $nim = $member['nim'];
 $email = $member['email'];
+$jabatan = $member['jabatan'] ?? 'Developer';
+$system_role = $member['system_role'] ?? 'member';
 $errors = [];
 
 // Handle form submission
@@ -44,6 +70,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nama = trim($_POST['nama'] ?? '');
     $nim = trim($_POST['nim'] ?? '');
     $email = trim($_POST['email'] ?? '');
+    
+    // Only Admin can update Jabatan and System Role
+    if ($userRole === 'admin') {
+        $jabatan_select = trim($_POST['jabatan'] ?? 'Developer');
+        if ($jabatan_select === 'Lainnya') {
+            $jabatan = trim($_POST['custom_jabatan'] ?? '');
+            if (empty($jabatan)) {
+                $errors['custom_jabatan_err'] = 'Nama jabatan kustom wajib diisi jika memilih opsi Lainnya.';
+            }
+        } else {
+            $jabatan = $jabatan_select;
+        }
+        $system_role = trim($_POST['system_role'] ?? 'member');
+    }
     
     // 1. Validation Name
     if (empty($nama)) {
@@ -72,11 +112,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $errors['email'] = 'Format email tidak valid.';
     } else {
-        // Check uniqueness of Email excluding current member
-        $stmt = $db->prepare("SELECT COUNT(*) FROM anggota WHERE email = ? AND id != ?");
-        $stmt->execute([$email, $id]);
-        if ($stmt->fetchColumn() > 0) {
-            $errors['email'] = 'Email sudah digunakan oleh anggota lain.';
+        // Check uniqueness of Email excluding current member in users
+        if (!empty($member['id_user'])) {
+            $stmt = $db->prepare("SELECT COUNT(*) FROM users WHERE email = ? AND id != ?");
+            $stmt->execute([$email, $member['id_user']]);
+            if ($stmt->fetchColumn() > 0) {
+                $errors['email'] = 'Email sudah digunakan oleh pengguna lain.';
+            }
+        }
+        
+        if (empty($errors['email'])) {
+            // Check uniqueness of Email excluding current member in anggota
+            $stmt = $db->prepare("SELECT COUNT(*) FROM anggota WHERE email = ? AND id != ?");
+            $stmt->execute([$email, $id]);
+            if ($stmt->fetchColumn() > 0) {
+                $errors['email'] = 'Email sudah digunakan oleh anggota lain.';
+            }
         }
     }
 
@@ -111,6 +162,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Update if no errors
     if (empty($errors)) {
         try {
+            $db->beginTransaction();
             $oldFotoPath = $member['foto'];
             
             // Upload new photo if provided
@@ -123,31 +175,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!empty($oldFotoPath)) {
                     $oldFullFile = __DIR__ . '/../uploads/' . $oldFotoPath;
                     if (file_exists($oldFullFile) && is_file($oldFullFile)) {
-                        unlink($oldFullFile);
+                        @unlink($oldFullFile);
                     }
                 }
                 
                 // DB Update query (with new photo)
-                $query = "UPDATE anggota SET nama = :nama, nim = :nim, email = :email, foto = :foto, updated_at = NOW() WHERE id = :id";
+                $query = "UPDATE anggota SET nama = :nama, nim = :nim, email = :email, foto = :foto, jabatan = :jabatan, updated_at = NOW() WHERE id = :id";
                 $stmt = $db->prepare($query);
                 $stmt->execute([
                     ':nama' => $nama,
                     ':nim' => $nim,
                     ':email' => $email,
                     ':foto' => $newFotoFilename,
+                    ':jabatan' => $jabatan,
                     ':id' => $id
                 ]);
             } else {
                 // DB Update query (keep existing photo)
-                $query = "UPDATE anggota SET nama = :nama, nim = :nim, email = :email, updated_at = NOW() WHERE id = :id";
+                $query = "UPDATE anggota SET nama = :nama, nim = :nim, email = :email, jabatan = :jabatan, updated_at = NOW() WHERE id = :id";
                 $stmt = $db->prepare($query);
                 $stmt->execute([
                     ':nama' => $nama,
                     ':nim' => $nim,
                     ':email' => $email,
+                    ':jabatan' => $jabatan,
                     ':id' => $id
                 ]);
             }
+
+            // Sync user credentials if linked
+            if (!empty($member['id_user'])) {
+                // Single Admin Protection:
+                // If current role is admin, and new system_role is set to member:
+                if ($userRole === 'admin' && $system_role === 'member' && ($member['system_role'] ?? '') === 'admin') {
+                    // Check if this is the ONLY admin in users table
+                    $adminCountStmt = $db->query("SELECT COUNT(*) FROM users WHERE role = 'admin'");
+                    $adminCount = (int)$adminCountStmt->fetchColumn();
+                    if ($adminCount <= 1) {
+                        throw new Exception('Perubahan role ditolak. Sistem harus memiliki minimal satu Admin.');
+                    }
+                }
+
+                $userUpdateQuery = "UPDATE users SET email = :email";
+                $userUpdateParams = [':email' => $email, ':id_user' => $member['id_user']];
+                
+                if ($userRole === 'admin') {
+                    $userUpdateQuery .= ", role = :role";
+                    $userUpdateParams[':role'] = $system_role;
+                }
+                
+                $userUpdateQuery .= " WHERE id = :id_user";
+                $stmtUser = $db->prepare($userUpdateQuery);
+                $stmtUser->execute($userUpdateParams);
+            }
+
+            $db->commit();
 
             // Sync session variables if editing own profile
             if (isset($_SESSION['user_id']) && !empty($member['id_user']) && (int)$member['id_user'] === (int)$_SESSION['user_id']) {
@@ -155,6 +237,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['email'] = $email;
                 if ($hasNewFoto) {
                     $_SESSION['foto'] = $newFotoFilename;
+                }
+                if ($userRole === 'admin') {
+                    $_SESSION['role'] = $system_role;
                 }
             }
 
@@ -165,10 +250,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             header('Location: index.php');
             exit;
         } catch (Exception $e) {
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
             $errors['global'] = 'Gagal memperbarui data: ' . $e->getMessage();
             // Clean uploaded photo if DB query fails
             if ($hasNewFoto && file_exists(__DIR__ . '/../uploads/' . $newFotoFilename)) {
-                unlink(__DIR__ . '/../uploads/' . $newFotoFilename);
+                @unlink(__DIR__ . '/../uploads/' . $newFotoFilename);
             }
         }
     }
@@ -266,6 +354,66 @@ renderHeader('Edit Anggota', 'anggota', '../');
                             <div class="invalid-feedback"><?php echo $errors['email']; ?></div>
                         <?php endif; ?>
                     </div>
+
+                    <!-- Jabatan / Peran Tim -->
+                    <div class="col-md-6">
+                        <label for="jabatan" class="form-label fw-semibold text-dark">Peran Tim / Jabatan</label>
+                        <select name="jabatan" id="jabatan" class="form-select <?php echo isset($errors['custom_jabatan_err']) ? 'is-invalid' : ''; ?>" <?php echo ($userRole !== 'admin') ? 'disabled' : ''; ?> onchange="toggleCustomJabatan()">
+                            <?php
+                            $predefined_groups = [
+                                'Management' => ['Project Manager', 'Product Manager', 'Scrum Master', 'Team Lead', 'System Administrator'],
+                                'Development' => ['Frontend Developer', 'Backend Developer', 'Full Stack Developer', 'Mobile Developer', 'Developer'],
+                                'Design' => ['UI Designer', 'UX Designer', 'UI/UX Designer', 'Graphic Designer'],
+                                'Quality Assurance' => ['QA Tester', 'QA Engineer', 'Software Tester'],
+                                'Analysis' => ['Business Analyst', 'System Analyst', 'Data Analyst'],
+                                'Data & Cloud' => ['Database Administrator', 'Data Engineer', 'Cloud Engineer', 'DevOps Engineer'],
+                                'Security' => ['Cyber Security Analyst', 'Security Engineer'],
+                                'Support' => ['Technical Support', 'IT Support', 'Documentation Specialist']
+                            ];
+                            
+                            $flat_predefined = [];
+                            foreach ($predefined_groups as $group => $options) {
+                                $flat_predefined = array_merge($flat_predefined, $options);
+                            }
+                            
+                            $isCustom = !empty($jabatan) && !in_array($jabatan, $flat_predefined);
+                            $selectedVal = $isCustom ? 'Lainnya' : $jabatan;
+                            
+                            foreach ($predefined_groups as $group => $options):
+                            ?>
+                                <optgroup label="<?php echo htmlspecialchars($group); ?>">
+                                    <?php foreach ($options as $opt): ?>
+                                        <option value="<?php echo htmlspecialchars($opt); ?>" <?php echo ($selectedVal === $opt) ? 'selected' : ''; ?>>
+                                            <?php echo htmlspecialchars($opt); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </optgroup>
+                            <?php endforeach; ?>
+                            <optgroup label="Lainnya">
+                                <option value="Lainnya" <?php echo ($selectedVal === 'Lainnya') ? 'selected' : ''; ?>>Lainnya (Custom)</option>
+                            </optgroup>
+                        </select>
+                    </div>
+
+                    <!-- Custom Jabatan Text Input (Hidden initially unless 'Lainnya' is selected) -->
+                    <div class="col-md-6" id="custom-jabatan-container" style="<?php echo ($selectedVal === 'Lainnya') ? '' : 'display: none;'; ?>">
+                        <label for="custom_jabatan" class="form-label fw-semibold text-dark">Masukkan Jabatan Kustom</label>
+                        <input type="text" name="custom_jabatan" id="custom_jabatan" class="form-control <?php echo isset($errors['custom_jabatan_err']) ? 'is-invalid' : ''; ?>" placeholder="Contoh: AI Engineer, Machine Learning Engineer" value="<?php echo htmlspecialchars($isCustom ? $jabatan : ''); ?>" <?php echo ($userRole !== 'admin') ? 'disabled' : ''; ?>>
+                        <?php if (isset($errors['custom_jabatan_err'])): ?>
+                            <div class="invalid-feedback"><?php echo $errors['custom_jabatan_err']; ?></div>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- Hak Akses (Hanya untuk Admin & Jika Tertaut Akun User) -->
+                    <?php if ($userRole === 'admin' && !empty($member['id_user'])): ?>
+                    <div class="col-md-6">
+                        <label for="system_role" class="form-label fw-semibold text-dark">Hak Akses Sistem</label>
+                        <select name="system_role" id="system_role" class="form-select">
+                            <option value="member" <?php echo ($system_role === 'member') ? 'selected' : ''; ?>>Member (Akses Terbatas)</option>
+                            <option value="admin" <?php echo ($system_role === 'admin') ? 'selected' : ''; ?>>Admin (Akses Penuh)</option>
+                        </select>
+                    </div>
+                    <?php endif; ?>
                 </div>
 
                 <!-- Submit buttons -->
@@ -303,6 +451,27 @@ renderHeader('Edit Anggota', 'anggota', '../');
                         reader.readAsDataURL(file);
                     }
                 });
+
+                // Toggle Custom Jabatan input field
+                function toggleCustomJabatan() {
+                    const jabatanSelect = document.getElementById('jabatan');
+                    const container = document.getElementById('custom-jabatan-container');
+                    const customInput = document.getElementById('custom_jabatan');
+                    
+                    if (jabatanSelect && container) {
+                        if (jabatanSelect.value === 'Lainnya') {
+                            container.style.display = 'block';
+                            if (customInput) {
+                                customInput.focus();
+                            }
+                        } else {
+                            container.style.display = 'none';
+                            if (customInput) {
+                                customInput.value = '';
+                            }
+                        }
+                    }
+                }
                 </script>
             </form>
         </div>

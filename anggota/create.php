@@ -4,7 +4,11 @@
  */
 
 require_once __DIR__ . '/../config/layout.php';
-require_once __DIR__ . '/../config/activity_helper.php';
+
+// Redirection back to listing page (Self registration model final)
+$_SESSION['flash_error'] = 'Penambahan anggota hanya dapat dilakukan melalui halaman Registrasi.';
+header('Location: index.php');
+exit;
 
 $db = Database::getConnection();
 

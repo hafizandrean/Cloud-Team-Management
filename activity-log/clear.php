@@ -5,15 +5,8 @@
 
 require_once __DIR__ . '/../config/layout.php';
 
-// Enforce login
-requireLogin();
-
-// Otorisasi check (Admin only)
-if (($_SESSION['role'] ?? '') !== 'admin') {
-    $_SESSION['flash_error'] = 'Anda tidak memiliki hak akses untuk membersihkan log.';
-    header('Location: index.php');
-    exit;
-}
+// Protect page (Admin only)
+requireRole('admin');
 
 try {
     $db = Database::getConnection();

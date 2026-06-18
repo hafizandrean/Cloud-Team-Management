@@ -6,6 +6,9 @@
 require_once __DIR__ . '/../config/layout.php';
 require_once __DIR__ . '/../config/activity_helper.php';
 
+// Protect page (Admin only)
+requireRole('admin');
+
 $db = Database::getConnection();
 
 // Get and validate Member ID
@@ -50,10 +53,37 @@ try {
         }
     }
 
-    // 4. Delete the member from database
+    // Start transaction to delete user and member atomically
+    $db->beginTransaction();
+
+    // 4. Delete associated user if linked (checking single admin rule first)
+    if (!empty($member['id_user'])) {
+        $roleStmt = $db->prepare("SELECT role FROM users WHERE id = ?");
+        $roleStmt->execute([$member['id_user']]);
+        $linkedUserRole = $roleStmt->fetchColumn();
+
+        if ($linkedUserRole === 'admin') {
+            $adminCount = (int)$db->query("SELECT COUNT(*) FROM users WHERE role = 'admin'")->fetchColumn();
+            if ($adminCount <= 1) {
+                if ($db->inTransaction()) {
+                    $db->rollBack();
+                }
+                $_SESSION['flash_error'] = 'Penghapusan ditolak. Anggota ini adalah satu-satunya Admin di sistem.';
+                header('Location: index.php');
+                exit;
+            }
+        }
+        
+        $deleteUserStmt = $db->prepare("DELETE FROM users WHERE id = ?");
+        $deleteUserStmt->execute([$member['id_user']]);
+    }
+
+    // 5. Delete the member from database
     $deleteQuery = "DELETE FROM anggota WHERE id = ?";
     $deleteStmt = $db->prepare($deleteQuery);
     $deleteStmt->execute([$id]);
+
+    $db->commit();
 
     // Write activity log
     writeLog($db, $_SESSION['user_id'], 'DELETE_MEMBER', 'Menghapus anggota: ' . $member['nama']);
@@ -62,7 +92,10 @@ try {
     header('Location: index.php');
     exit;
 
-} catch (PDOException $e) {
+} catch (Exception $e) {
+    if (isset($db) && $db->inTransaction()) {
+        $db->rollBack();
+    }
     $_SESSION['flash_error'] = 'Gagal menghapus anggota: ' . $e->getMessage();
     header('Location: index.php');
     exit;

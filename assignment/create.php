@@ -7,6 +7,9 @@ require_once __DIR__ . '/../config/layout.php';
 require_once __DIR__ . '/helper.php';
 require_once __DIR__ . '/../config/activity_helper.php';
 
+// Protect page (Admin only)
+requireRole('admin');
+
 $db = Database::getConnection();
 
 // Default selected project from Quick Assign parameter

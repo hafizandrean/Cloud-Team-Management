@@ -197,25 +197,84 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['profile_photo'])) {
     }
 }
 
+$userRole = $currentUser['role'] ?? 'member';
+$anggotaId = $_SESSION['anggota_id'] ?? null;
+
 try {
     $db = Database::getConnection();
     
-    // 1. Fetch Metrics counts
-    $totalUsers = $db->query("SELECT COUNT(*) FROM users")->fetchColumn();
-    $totalAnggota = $db->query("SELECT COUNT(*) FROM anggota")->fetchColumn();
-    $totalProyek = $db->query("SELECT COUNT(*) FROM proyek")->fetchColumn();
-    $totalAssignments = $db->query("SELECT COUNT(*) FROM anggota_proyek")->fetchColumn();
-
-    // 2. Fetch Project status breakdown
-    $stmt = $db->query("SELECT status, COUNT(*) as count FROM proyek GROUP BY status");
-    while ($row = $stmt->fetch()) {
-        if (isset($statusCounts[$row['status']])) {
-            $statusCounts[$row['status']] = (int)$row['count'];
-        }
+    if ($userRole !== 'admin' && !$anggotaId) {
+        $stmtAnggota = $db->prepare("SELECT id FROM anggota WHERE id_user = ?");
+        $stmtAnggota->execute([$currentUser['id']]);
+        $anggotaId = $stmtAnggota->fetchColumn() ?: null;
+        $_SESSION['anggota_id'] = $anggotaId;
     }
+    
+    if ($userRole === 'admin') {
+        // 1. Fetch Metrics counts
+        $totalUsers = $db->query("SELECT COUNT(*) FROM users")->fetchColumn();
+        $totalAnggota = $db->query("SELECT COUNT(*) FROM anggota")->fetchColumn();
+        $totalProyek = $db->query("SELECT COUNT(*) FROM proyek")->fetchColumn();
+        $totalAssignments = $db->query("SELECT COUNT(*) FROM anggota_proyek")->fetchColumn();
 
-    // 3. Fetch 5 Recent Projects
-    $recentProjects = $db->query("SELECT * FROM proyek ORDER BY created_at DESC LIMIT 5")->fetchAll();
+        // 2. Fetch Project status breakdown
+        $stmt = $db->query("SELECT status, COUNT(*) as count FROM proyek GROUP BY status");
+        while ($row = $stmt->fetch()) {
+            if (isset($statusCounts[$row['status']])) {
+                $statusCounts[$row['status']] = (int)$row['count'];
+            }
+        }
+
+        // 3. Fetch 5 Recent Projects
+        $recentProjects = $db->query("SELECT * FROM proyek ORDER BY created_at DESC LIMIT 5")->fetchAll();
+    } else {
+        $anggotaIdValue = $anggotaId ? (int)$anggotaId : 0;
+
+        // 1. Fetch member metrics
+        $pStmt = $db->prepare("SELECT COUNT(*) FROM anggota_proyek WHERE anggota_id = ?");
+        $pStmt->execute([$anggotaIdValue]);
+        $totalProyekSaya = $pStmt->fetchColumn();
+
+        $tugasSaya = $totalProyekSaya;
+
+        $pbStmt = $db->prepare("
+            SELECT COUNT(*) 
+            FROM proyek p
+            JOIN anggota_proyek ap ON p.id = ap.proyek_id
+            WHERE ap.anggota_id = ? AND p.status = 'berjalan'
+        ");
+        $pbStmt->execute([$anggotaIdValue]);
+        $proyekBerjalanSaya = $pbStmt->fetchColumn();
+
+        $totalRekanTim = max(0, (int)$db->query("SELECT COUNT(*) FROM anggota")->fetchColumn() - 1);
+
+        // 2. Fetch Project status breakdown for member's projects
+        $psStmt = $db->prepare("
+            SELECT p.status, COUNT(*) as count 
+            FROM proyek p
+            JOIN anggota_proyek ap ON p.id = ap.proyek_id
+            WHERE ap.anggota_id = ?
+            GROUP BY p.status
+        ");
+        $psStmt->execute([$anggotaIdValue]);
+        while ($row = $psStmt->fetch()) {
+            if (isset($statusCounts[$row['status']])) {
+                $statusCounts[$row['status']] = (int)$row['count'];
+            }
+        }
+
+        // 3. Fetch 5 Recent Projects assigned to member
+        $rpStmt = $db->prepare("
+            SELECT p.* 
+            FROM proyek p
+            JOIN anggota_proyek ap ON p.id = ap.proyek_id
+            WHERE ap.anggota_id = ?
+            ORDER BY p.created_at DESC 
+            LIMIT 5
+        ");
+        $rpStmt->execute([$anggotaIdValue]);
+        $recentProjects = $rpStmt->fetchAll();
+    }
 
     // 4. Fetch 5 Recent Members
     $recentMembers = $db->query("SELECT * FROM anggota ORDER BY created_at DESC LIMIT 5")->fetchAll();
@@ -251,6 +310,7 @@ renderHeader('Dashboard', 'dashboard', '../');
 
             <!-- Summary Cards Grid -->
             <div class="row g-4 mb-4">
+                <?php if ($userRole === 'admin'): ?>
                 <div class="col-12 col-sm-6 col-lg-3">
                     <a href="../activity-log/index.php" class="card-summary d-flex align-items-center justify-content-between text-decoration-none" title="Lihat Log Aktivitas User">
                         <div class="metric-info">
@@ -290,6 +350,47 @@ renderHeader('Dashboard', 'dashboard', '../');
                         <div class="card-summary-icon assignment">🔗</div>
                     </a>
                 </div>
+                <?php else: ?>
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <a href="../proyek/index.php" class="card-summary d-flex align-items-center justify-content-between text-decoration-none" title="Lihat Proyek Saya">
+                        <div class="metric-info">
+                            <div class="card-summary-title text-muted">Proyek Saya</div>
+                            <div class="card-summary-value text-dark" id="val-proyek-saya">0</div>
+                        </div>
+                        <div class="card-summary-icon proyek">📂</div>
+                    </a>
+                </div>
+                
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <a href="../assignment/index.php" class="card-summary d-flex align-items-center justify-content-between text-decoration-none" title="Lihat Tugas Saya">
+                        <div class="metric-info">
+                            <div class="card-summary-title text-muted">Tugas Saya</div>
+                            <div class="card-summary-value text-dark" id="val-tugas-saya">0</div>
+                        </div>
+                        <div class="card-summary-icon assignment">🔗</div>
+                    </a>
+                </div>
+
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <a href="../proyek/index.php?status=berjalan" class="card-summary d-flex align-items-center justify-content-between text-decoration-none" title="Lihat Proyek Berjalan Saya">
+                        <div class="metric-info">
+                            <div class="card-summary-title text-muted">Proyek Berjalan Saya</div>
+                            <div class="card-summary-value text-dark" id="val-proyek-berjalan">0</div>
+                        </div>
+                        <div class="card-summary-icon users">⚡</div>
+                    </a>
+                </div>
+
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <a href="../anggota/index.php" class="card-summary d-flex align-items-center justify-content-between text-decoration-none" title="Lihat Rekan Tim">
+                        <div class="metric-info">
+                            <div class="card-summary-title text-muted">Rekan Tim</div>
+                            <div class="card-summary-value text-dark" id="val-rekan-tim">0</div>
+                        </div>
+                        <div class="card-summary-icon anggota">👥</div>
+                    </a>
+                </div>
+                <?php endif; ?>
             </div>
 
             <!-- Widgets Grid -->
@@ -359,6 +460,7 @@ renderHeader('Dashboard', 'dashboard', '../');
                             <div class="card w-100 p-4 d-flex flex-column justify-content-between">
                                 <h5 class="card-title fw-bold mb-3">Aksi Cepat</h5>
                                 <div class="d-flex flex-column gap-3 justify-content-center h-100">
+                                    <?php if ($userRole === 'admin'): ?>
                                     <a href="../anggota/index.php" class="btn btn-light btn-quick-access w-100 text-start py-3 px-3 shadow-sm d-flex align-items-center justify-content-between">
                                         <div class="d-flex align-items-center gap-2">
                                             <span style="font-size: 18px;">👥</span>
@@ -373,6 +475,22 @@ renderHeader('Dashboard', 'dashboard', '../');
                                         </div>
                                         <span class="text-muted small">→</span>
                                     </a>
+                                    <?php else: ?>
+                                    <a href="../anggota/index.php" class="btn btn-light btn-quick-access w-100 text-start py-3 px-3 shadow-sm d-flex align-items-center justify-content-between">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span style="font-size: 18px;">👥</span>
+                                            <span class="fw-semibold small text-dark">Lihat Anggota</span>
+                                        </div>
+                                        <span class="text-muted small">→</span>
+                                    </a>
+                                    <a href="../proyek/index.php" class="btn btn-light btn-quick-access w-100 text-start py-3 px-3 shadow-sm d-flex align-items-center justify-content-between">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span style="font-size: 18px;">📂</span>
+                                            <span class="fw-semibold small text-dark">Lihat Proyek Saya</span>
+                                        </div>
+                                        <span class="text-muted small">→</span>
+                                    </a>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>
@@ -382,6 +500,7 @@ renderHeader('Dashboard', 'dashboard', '../');
 
             <!-- Tables Row -->
             <div class="row g-4">
+                <?php if ($userRole === 'admin'): ?>
                 <!-- Recent Projects Table -->
                 <div class="col-12 col-xl-6">
                     <div class="card p-4 h-100">
@@ -480,15 +599,71 @@ renderHeader('Dashboard', 'dashboard', '../');
                         </div>
                     </div>
                 </div>
+                <?php else: ?>
+                <!-- Member Dashboard: Only show personal projects spanning full width -->
+                <div class="col-12">
+                    <div class="card p-4 h-100">
+                        <h5 class="card-title fw-bold mb-3">Proyek Saya</h5>
+                        <div class="table-responsive">
+                            <table class="table table-hover table-custom mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Nama Proyek</th>
+                                        <th>Deadline</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php if (empty($recentProjects)): ?>
+                                        <tr>
+                                            <td colspan="3" class="text-center py-5">
+                                                <div class="empty-state-container">
+                                                    <span class="empty-state-icon">📋</span>
+                                                    <h6 class="fw-bold text-dark mb-1">Belum Ada Proyek</h6>
+                                                    <p class="empty-state-text small">Anda tidak sedang ditugaskan dalam proyek apa pun.</p>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    <?php else: ?>
+                                        <?php foreach ($recentProjects as $p): ?>
+                                            <tr class="clickable-row" onclick="window.location.href='../proyek/detail.php?id=<?php echo $p['id']; ?>';" title="Klik untuk melihat detail proyek <?php echo htmlspecialchars($p['nama_proyek']); ?>">
+                                                <td class="fw-semibold text-dark"><?php echo htmlspecialchars($p['nama_proyek']); ?></td>
+                                                <td><?php echo date('d M Y', strtotime($p['deadline'])); ?></td>
+                                                <td>
+                                                    <?php 
+                                                    $badgeClass = 'badge-planning';
+                                                    $statusText = 'Planning';
+                                                    if ($p['status'] === 'berjalan') { $badgeClass = 'badge-progress'; $statusText = 'On Progress'; }
+                                                    elseif ($p['status'] === 'selesai') { $badgeClass = 'badge-completed'; $statusText = 'Completed'; }
+                                                    elseif ($p['status'] === 'tertunda') { $badgeClass = 'badge-suspended'; $statusText = 'Suspended'; }
+                                                    ?>
+                                                    <span class="badge <?php echo $badgeClass; ?>"><?php echo $statusText; ?></span>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <?php endif; ?>
             </div>
 <!-- Counter Animation Script -->
 <script>
 document.addEventListener("DOMContentLoaded", () => {
     const counters = [
+        <?php if ($userRole === 'admin'): ?>
         { id: "val-users", target: <?php echo (int)$totalUsers; ?> },
         { id: "val-anggota", target: <?php echo (int)$totalAnggota; ?> },
         { id: "val-proyek", target: <?php echo (int)$totalProyek; ?> },
         { id: "val-assignments", target: <?php echo (int)$totalAssignments; ?> }
+        <?php else: ?>
+        { id: "val-proyek-saya", target: <?php echo (int)$totalProyekSaya; ?> },
+        { id: "val-tugas-saya", target: <?php echo (int)$tugasSaya; ?> },
+        { id: "val-proyek-berjalan", target: <?php echo (int)$proyekBerjalanSaya; ?> },
+        { id: "val-rekan-tim", target: <?php echo (int)$totalRekanTim; ?> }
+        <?php endif; ?>
     ];
 
     counters.forEach(c => {
