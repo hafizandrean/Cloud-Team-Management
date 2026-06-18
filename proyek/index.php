@@ -130,43 +130,43 @@ renderHeader('Kelola Proyek', 'proyek', '../');
 <div class="row g-4 mb-4">
     <!-- Total Proyek -->
     <div class="col-6 col-md-3">
-        <div class="card p-3 border-0 shadow-sm d-flex flex-row align-items-center justify-content-between">
+        <a href="index.php" class="card p-3 border-0 shadow-sm d-flex flex-row align-items-center justify-content-between text-decoration-none" title="Lihat Semua Proyek" style="cursor: pointer;">
             <div>
                 <span class="text-muted d-block small fw-medium text-uppercase tracking-wider">Total Proyek</span>
                 <h3 class="fw-bold mb-0 text-dark"><?php echo $totalProjects; ?></h3>
             </div>
             <div class="card-summary-icon proyek small">📂</div>
-        </div>
+        </a>
     </div>
     <!-- Planning -->
     <div class="col-6 col-md-3">
-        <div class="card p-3 border-0 shadow-sm d-flex flex-row align-items-center justify-content-between">
+        <a href="index.php?status=direncanakan" class="card p-3 border-0 shadow-sm d-flex flex-row align-items-center justify-content-between text-decoration-none" title="Lihat Proyek Planning" style="cursor: pointer;">
             <div>
                 <span class="text-muted d-block small fw-medium text-uppercase tracking-wider">Planning</span>
                 <h3 class="fw-bold mb-0 text-dark"><?php echo $planningProjects; ?></h3>
             </div>
             <div class="card-summary-icon assignment small">📋</div>
-        </div>
+        </a>
     </div>
     <!-- On Progress -->
     <div class="col-6 col-md-3">
-        <div class="card p-3 border-0 shadow-sm d-flex flex-row align-items-center justify-content-between">
+        <a href="index.php?status=berjalan" class="card p-3 border-0 shadow-sm d-flex flex-row align-items-center justify-content-between text-decoration-none" title="Lihat Proyek On Progress" style="cursor: pointer;">
             <div>
                 <span class="text-muted d-block small fw-medium text-uppercase tracking-wider">On Progress</span>
                 <h3 class="fw-bold mb-0 text-dark"><?php echo $progressProjects; ?></h3>
             </div>
             <div class="card-summary-icon users small">⚡</div>
-        </div>
+        </a>
     </div>
     <!-- Completed -->
     <div class="col-6 col-md-3">
-        <div class="card p-3 border-0 shadow-sm d-flex flex-row align-items-center justify-content-between">
+        <a href="index.php?status=selesai" class="card p-3 border-0 shadow-sm d-flex flex-row align-items-center justify-content-between text-decoration-none" title="Lihat Proyek Completed" style="cursor: pointer;">
             <div>
                 <span class="text-muted d-block small fw-medium text-uppercase tracking-wider">Completed</span>
                 <h3 class="fw-bold mb-0 text-dark"><?php echo $completedProjects; ?></h3>
             </div>
             <div class="card-summary-icon anggota small">✓</div>
-        </div>
+        </a>
     </div>
 </div>
 <?php endif; ?>

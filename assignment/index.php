@@ -156,41 +156,45 @@ renderHeader('Kelola Assignment', 'assignment', '../');
     <!-- Assignment Statistics Header -->
     <?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
     <div class="row g-4 mb-4">
+        <!-- Total Assignment -->
         <div class="col-6 col-lg-3">
-            <div class="card p-3 border-0 shadow-sm d-flex flex-row align-items-center justify-content-between">
+            <a href="index.php" class="card p-3 border-0 shadow-sm d-flex flex-row align-items-center justify-content-between text-decoration-none" title="Lihat Daftar Penugasan" style="cursor: pointer;">
                 <div>
                     <span class="text-muted d-block small fw-medium text-uppercase tracking-wider">Total Assignment</span>
                     <h3 class="fw-bold mb-0 text-dark"><?php echo $stats['total_assignments']; ?></h3>
                 </div>
                 <div class="card-summary-icon assignment small">🔗</div>
-            </div>
+            </a>
         </div>
+        <!-- Anggota Aktif -->
         <div class="col-6 col-lg-3">
-            <div class="card p-3 border-0 shadow-sm d-flex flex-row align-items-center justify-content-between">
+            <a href="../anggota/index.php" class="card p-3 border-0 shadow-sm d-flex flex-row align-items-center justify-content-between text-decoration-none" title="Lihat Daftar Anggota" style="cursor: pointer;">
                 <div>
                     <span class="text-muted d-block small fw-medium text-uppercase tracking-wider">Anggota Aktif</span>
                     <h3 class="fw-bold mb-0 text-dark"><?php echo $stats['total_active_members']; ?></h3>
                 </div>
                 <div class="card-summary-icon users small">👥</div>
-            </div>
+            </a>
         </div>
+        <!-- Proyek Aktif -->
         <div class="col-6 col-lg-3">
-            <div class="card p-3 border-0 shadow-sm d-flex flex-row align-items-center justify-content-between">
+            <a href="../proyek/index.php" class="card p-3 border-0 shadow-sm d-flex flex-row align-items-center justify-content-between text-decoration-none" title="Lihat Daftar Proyek" style="cursor: pointer;">
                 <div>
                     <span class="text-muted d-block small fw-medium text-uppercase tracking-wider">Proyek Aktif</span>
                     <h3 class="fw-bold mb-0 text-dark"><?php echo $stats['total_active_projects']; ?></h3>
                 </div>
                 <div class="card-summary-icon proyek small">📂</div>
-            </div>
+            </a>
         </div>
+        <!-- Rata-rata Assignment -->
         <div class="col-6 col-lg-3">
-            <div class="card p-3 border-0 shadow-sm d-flex flex-row align-items-center justify-content-between">
+            <a href="index.php" class="card p-3 border-0 shadow-sm d-flex flex-row align-items-center justify-content-between text-decoration-none" title="Rincian Rata-rata Penugasan" style="cursor: pointer;">
                 <div>
                     <span class="text-muted d-block small fw-medium text-uppercase tracking-wider">Rata-rata Assignment</span>
                     <h3 class="fw-bold mb-0 text-dark"><?php echo number_format($stats['average_assignments'], 2); ?></h3>
                 </div>
                 <div class="card-summary-icon anggota small">📈</div>
-            </div>
+            </a>
         </div>
     </div>
     <?php endif; ?>
@@ -337,7 +341,7 @@ renderHeader('Kelola Assignment', 'assignment', '../');
                         <?php foreach ($distribution as $d): ?>
                             <div>
                                 <div class="d-flex justify-content-between small mb-1">
-                                    <span class="fw-medium text-dark text-truncate" style="max-width: 220px;" title="<?php echo htmlspecialchars($d['nama_proyek']); ?>">
+                                    <span class="fw-medium text-dark" title="<?php echo htmlspecialchars($d['nama_proyek']); ?>">
                                         <?php echo htmlspecialchars($d['nama_proyek']); ?>
                                     </span>
                                     <span class="text-muted small fw-bold">

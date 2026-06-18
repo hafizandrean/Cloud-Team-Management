@@ -167,43 +167,43 @@ renderHeader('Activity Log', 'activity', '../');
 <div class="row g-4 mb-4">
     <!-- Card 1: Total Aktivitas -->
     <div class="col-12 col-sm-6 col-lg-3">
-        <div class="card-summary d-flex align-items-center justify-content-between">
+        <a href="index.php" class="card-summary d-flex align-items-center justify-content-between text-decoration-none" title="Reset Filter & Lihat Semua Log">
             <div class="metric-info">
                 <div class="card-summary-title">Total Aktivitas</div>
                 <div class="card-summary-value" id="val-total-logs"><?php echo $metricTotalLogs; ?></div>
             </div>
             <div class="card-summary-icon" style="background-color: rgba(99, 102, 241, 0.1); color: var(--primary-color);">📊</div>
-        </div>
+        </a>
     </div>
     <!-- Card 2: Login Hari Ini -->
     <div class="col-12 col-sm-6 col-lg-3">
-        <div class="card-summary d-flex align-items-center justify-content-between">
+        <a href="index.php?activity_type=LOGIN" class="card-summary d-flex align-items-center justify-content-between text-decoration-none" title="Filter Berdasarkan Aktivitas Login">
             <div class="metric-info">
                 <div class="card-summary-title">Login Hari Ini</div>
                 <div class="card-summary-value" id="val-today-logins"><?php echo $metricTodayLogins; ?></div>
             </div>
             <div class="card-summary-icon" style="background-color: rgba(16, 185, 129, 0.1); color: #10b981;">🔑</div>
-        </div>
+        </a>
     </div>
     <!-- Card 3: Perubahan Data -->
     <div class="col-12 col-sm-6 col-lg-3">
-        <div class="card-summary d-flex align-items-center justify-content-between">
+        <a href="index.php?activity_type=UPDATE" class="card-summary d-flex align-items-center justify-content-between text-decoration-none" title="Lihat Riwayat Perubahan Data (Edit/Update)">
             <div class="metric-info">
                 <div class="card-summary-title">Perubahan Data</div>
                 <div class="card-summary-value" id="val-data-changes"><?php echo $metricDataChanges; ?></div>
             </div>
             <div class="card-summary-icon" style="background-color: rgba(245, 158, 11, 0.1); color: #f59e0b;">🔄</div>
-        </div>
+        </a>
     </div>
     <!-- Card 4: User Aktif -->
     <div class="col-12 col-sm-6 col-lg-3">
-        <div class="card-summary d-flex align-items-center justify-content-between">
+        <a href="../anggota/index.php" class="card-summary d-flex align-items-center justify-content-between text-decoration-none" title="Lihat Daftar Anggota Aktif">
             <div class="metric-info">
                 <div class="card-summary-title">User Aktif</div>
                 <div class="card-summary-value" id="val-active-users"><?php echo $metricActiveUsers; ?></div>
             </div>
             <div class="card-summary-icon" style="background-color: rgba(14, 165, 233, 0.1); color: #0ea5e9;">⚡</div>
-        </div>
+        </a>
     </div>
 </div>
 

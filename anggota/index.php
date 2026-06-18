@@ -168,7 +168,7 @@ renderHeader('Kelola Anggota', 'anggota', '../');
         </p>
     </div>
     <div class="my-2 flex-shrink-0">
-        <div class="card border-0 shadow-sm p-3 bg-white d-flex align-items-center flex-row gap-3" style="border-radius: 12px; min-width: 190px; border: 1px solid rgba(0,0,0,0.04) !important;">
+        <a href="index.php" class="card border-0 shadow-sm p-3 bg-white d-flex align-items-center flex-row gap-3 text-decoration-none" style="border-radius: 12px; min-width: 190px; border: 1px solid rgba(0,0,0,0.04) !important; cursor: pointer;" title="Lihat Semua Anggota">
             <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 44px; height: 44px; background-color: rgba(99, 102, 241, 0.08); color: var(--primary-color); flex-shrink: 0;">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
             </div>
@@ -176,7 +176,7 @@ renderHeader('Kelola Anggota', 'anggota', '../');
                 <span class="text-muted d-block small fw-semibold mb-0.5" style="font-size: 10px; letter-spacing: 0.5px; text-transform: uppercase; line-height: 1;">Total Anggota</span>
                 <span class="fs-4 fw-bold text-dark" style="line-height: 1;"><?php echo (int)($totalRecords ?? 0); ?> <span class="fs-6 fw-normal text-muted" style="font-size: 13px;">Orang</span></span>
             </div>
-        </div>
+        </a>
     </div>
 </div>
 

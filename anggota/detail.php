@@ -201,7 +201,7 @@ renderHeader('Detail Anggota', 'anggota', '../');
             <div class="user-stats-grid d-flex justify-content-around mt-auto pt-3 border-top w-100">
                 <div class="stat-item text-center px-2">
                     <span class="text-muted d-block small mb-1" style="font-size: 11px;">Alamat Email</span>
-                    <span class="fw-semibold text-dark small text-truncate d-block" style="max-width: 140px;" title="<?php echo htmlspecialchars($member['email'] ?? '-'); ?>">
+                    <span class="fw-semibold text-dark small d-block" style="word-break: break-all;" title="<?php echo htmlspecialchars($member['email'] ?? '-'); ?>">
                         <?php echo htmlspecialchars($member['email'] ?? '-'); ?>
                     </span>
                 </div>

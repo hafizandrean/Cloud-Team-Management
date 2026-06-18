@@ -55,43 +55,43 @@ renderHeader('Report Center', 'reports', '../');
     <div class="row g-4 mb-4">
         <!-- Members Count -->
         <div class="col-12 col-sm-6 col-lg-3">
-            <div class="card-summary d-flex align-items-center justify-content-between">
+            <a href="../anggota/index.php" class="card-summary d-flex align-items-center justify-content-between text-decoration-none" title="Lihat Daftar Anggota">
                 <div class="metric-info">
                     <div class="card-summary-title">Total Members</div>
                     <div class="card-summary-value" id="val-total-members"><?php echo $summary['total_members']; ?></div>
                 </div>
                 <div class="card-summary-icon" style="background-color: rgba(99, 102, 241, 0.1); color: var(--primary-color);">👥</div>
-            </div>
+            </a>
         </div>
         <!-- Projects Count -->
         <div class="col-12 col-sm-6 col-lg-3">
-            <div class="card-summary d-flex align-items-center justify-content-between">
+            <a href="../proyek/index.php" class="card-summary d-flex align-items-center justify-content-between text-decoration-none" title="Lihat Daftar Proyek">
                 <div class="metric-info">
                     <div class="card-summary-title">Total Projects</div>
                     <div class="card-summary-value" id="val-total-projects"><?php echo $summary['total_projects']; ?></div>
                 </div>
                 <div class="card-summary-icon" style="background-color: rgba(14, 165, 233, 0.1); color: #0ea5e9;">📂</div>
-            </div>
+            </a>
         </div>
         <!-- Assignments Count -->
         <div class="col-12 col-sm-6 col-lg-3">
-            <div class="card-summary d-flex align-items-center justify-content-between">
+            <a href="../assignment/index.php" class="card-summary d-flex align-items-center justify-content-between text-decoration-none" title="Lihat Daftar Penugasan">
                 <div class="metric-info">
                     <div class="card-summary-title">Total Assignments</div>
                     <div class="card-summary-value" id="val-total-assignments"><?php echo $summary['total_assignments']; ?></div>
                 </div>
                 <div class="card-summary-icon" style="background-color: rgba(245, 158, 11, 0.1); color: #f59e0b;">🔄</div>
-            </div>
+            </a>
         </div>
         <!-- Completed Projects Count -->
         <div class="col-12 col-sm-6 col-lg-3">
-            <div class="card-summary d-flex align-items-center justify-content-between">
+            <a href="../proyek/index.php?status=selesai" class="card-summary d-flex align-items-center justify-content-between text-decoration-none" title="Lihat Proyek Selesai">
                 <div class="metric-info">
                     <div class="card-summary-title">Completed Projects</div>
                     <div class="card-summary-value" id="val-completed-projects"><?php echo $summary['completed_projects']; ?></div>
                 </div>
                 <div class="card-summary-icon" style="background-color: rgba(16, 185, 129, 0.1); color: #10b981;">✅</div>
-            </div>
+            </a>
         </div>
     </div>
 
